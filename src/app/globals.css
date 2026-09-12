@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: Arial, Helvetica, sans-serif;
+  --font-serif: Georgia, "Times New Roman", serif;
+}
+body {
+  background: #f8f7f4;
+  color: #292524;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+::selection {
+  background: #c9e4d2;
+}
+:focus-visible {
+  outline: 3px solid #047857;
+  outline-offset: 4px;
+}
+.field {
+  @apply block w-full rounded-xl border border-stone-300 bg-stone-50/50 px-3.5 py-3 text-sm leading-6 text-stone-800 placeholder:text-stone-500;
+}
+.field[aria-invalid="true"] {
+  border-color: #b91c1c;
+}
+.field[readonly] {
+  opacity: 0.7;
+}
+.skip-link {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 100;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  padding: 12px 20px;
+  background: white;
+}
+.skip-link:focus {
+  width: auto;
+  height: auto;
+  clip-path: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none;
+    transition: none;
+  }
+}
