@@ -1,30 +1,53 @@
 @import "tailwindcss";
 
 @theme inline {
-  --font-sans: Arial, Helvetica, sans-serif;
-  --font-serif: Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
+
+  --color-primary-500: #3d6bec;
+  --color-primary-600: #2a63e2;
+  --color-ink: #0e1a32;
+  --color-muted: #64748b;
+  --color-subtle: #94a3b8;
+  --color-canvas: #eef2f8;
+
+  /* Auth screens (Figma "Masuk"/"Daftar") use their own neutral ramp,
+     distinct from the onboarding deck's --color-ink. */
+  --color-secondary-500: #1a1c1e;
+  --color-grey: #6c7278;
+  --color-stroke: #edf1f3;
+  --color-placeholder: #acb5bb;
+  --color-hairline: #eff0f6;
+
+  /* Profile screen (Figma "Profile") */
+  --color-amber: #f59e0b;
+  --color-amber-soft: #fff9c4;
+  --color-tile: #f5f8ff;
+  --color-chip: #f8f9fb;
+
+  /* Quiz screens (Figma "Quiz"/"Finish") */
+  --color-primary-100: #d9defb;
+  --color-primary-300: #93a4f5;
+  --color-success: #1f8851;
+  --color-success-soft: #c3fed7;
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 }
+
+/* Gate hover affordances to devices that actually hover. */
+@custom-variant can-hover (@media (hover: hover) and (pointer: fine));
+
 body {
-  background: #f8f7f4;
-  color: #292524;
+  background: var(--color-canvas);
+  color: var(--color-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
 ::selection {
-  background: #c9e4d2;
+  background: #dbe4fb;
 }
 :focus-visible {
-  outline: 3px solid #047857;
-  outline-offset: 4px;
-}
-.field {
-  @apply block w-full rounded-xl border border-stone-300 bg-stone-50/50 px-3.5 py-3 text-sm leading-6 text-stone-800 placeholder:text-stone-500;
-}
-.field[aria-invalid="true"] {
-  border-color: #b91c1c;
-}
-.field[readonly] {
-  opacity: 0.7;
+  outline: 3px solid var(--color-primary-500);
+  outline-offset: 3px;
 }
 .skip-link {
   position: fixed;
@@ -43,11 +66,22 @@ body {
   height: auto;
   clip-path: none;
 }
+
+/*
+ * Soften motion rather than deleting it: a hard `transition: none` turns every
+ * crossfade into a teleport, which reads as a bug. Transform-based motion is
+ * dropped separately by MotionConfig reducedMotion="user".
+ */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
-    animation: none;
-    transition: none;
+    /* biome-ignore-start lint/complexity/noImportantStyles: an accessibility
+       override has to beat every author style it is overriding. */
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.12s !important;
+    scroll-behavior: auto !important;
+    /* biome-ignore-end lint/complexity/noImportantStyles: end of override. */
   }
 }

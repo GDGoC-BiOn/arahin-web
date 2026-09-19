@@ -1,22 +1,33 @@
 import type { Metadata } from "next";
+import { Nunito } from "next/font/google";
 import type { ReactNode } from "react";
+import { MotionProvider } from "@/shared/providers/motion-provider";
 import { QueryProvider } from "@/shared/providers/query-provider";
 import "./globals.css";
 
+const nunito = Nunito({
+  subsets: ["latin"],
+  weight: ["400", "600", "700"],
+  variable: "--font-nunito",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "ArahIn — Small steps, clear direction",
+  title: "ArahIn — Rangkum materi jadi PPT, Quiz, & rangkuman",
   description:
-    "A calm little home for your next steps. Capture a task, make a little progress, and find your direction with ArahIn.",
+    "Unggah soal atau materi, biarkan AI merangkumnya, lalu ubah hasilnya menjadi PPT, Quiz, atau rangkuman dalam hitungan detik.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="id" className={nunito.variable}>
       <body>
         <a href="#main" className="skip-link">
-          Skip to content
+          Lewati ke konten
         </a>
-        <QueryProvider>{children}</QueryProvider>
+        <QueryProvider>
+          <MotionProvider>{children}</MotionProvider>
+        </QueryProvider>
       </body>
     </html>
   );
