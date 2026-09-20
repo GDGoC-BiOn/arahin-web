@@ -13,28 +13,33 @@ import { FADE } from "./motion-tokens";
 import { SessionNode } from "./session-node";
 import { SessionRail, TrackHeader } from "./track-timeline";
 
+const GENERATION_POLL_MS = 2_500;
+
 export function JourneyScreen({
   useCases,
   spaceId,
+  generationId,
   onBack,
   onOpenSession,
   onSelectTab,
 }: {
   useCases: JourneyUseCases;
   spaceId: string;
+  generationId?: string | null;
   onBack: () => void;
   onOpenSession: (session: TimelineSession) => void;
   onSelectTab: (tab: AppTab) => void;
 }) {
   const [tracks, setTracks] = useState<TimelineTrack[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [preview, setPreview] = useState<TimelineSession | null>(null);
 
-  const load = useCallback(async () => {
+  const loadFinal = useCallback(async () => {
     try {
-      setTracks(await useCases.loadTimeline(spaceId));
+      const loaded = await useCases.loadTimeline(spaceId);
+      setTracks(loaded);
+      setError(null);
     } catch (cause) {
-      // 404 here means "no blueprint generated yet", which the backend
-      // deliberately conflates with a missing space. Say the actionable thing.
       const status = (cause as { status?: number } | null)?.status;
       setError(
         status === 404
@@ -45,12 +50,58 @@ export function JourneyScreen({
   }, [spaceId, useCases]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (!generationId) {
+      void loadFinal();
+      return;
+    }
+
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const poll = async () => {
+      try {
+        const { job, track } = await useCases.loadGenerationTimeline(
+          spaceId,
+          generationId,
+        );
+        if (cancelled) return;
+
+        if (job.status === "completed") {
+          await loadFinal();
+          return;
+        }
+        if (job.status === "failed" || job.status === "cancelled") {
+          setError(job.errorMessage ?? "Pembuatan materi gagal.");
+          return;
+        }
+
+        setTracks([track]);
+        setError(null);
+        timer = setTimeout(poll, GENERATION_POLL_MS);
+      } catch {
+        if (cancelled) return;
+        setError("Gagal memuat progres materi. Coba lagi.");
+      }
+    };
+
+    void poll();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [generationId, loadFinal, spaceId, useCases]);
+
+  const open = (session: TimelineSession) => {
+    if (session.previewMarkdown) {
+      setPreview(session);
+      return;
+    }
+    onOpenSession(session);
+  };
 
   return (
     <AppPanel>
-      <main id="main" className="flex flex-1 flex-col overflow-y-auto">
+      <main id="main" className="relative flex flex-1 flex-col overflow-y-auto">
         <AnimatePresence initial={false} mode="popLayout">
           {tracks ? (
             <motion.div
@@ -72,7 +123,7 @@ export function JourneyScreen({
                           <SessionNode
                             session={session}
                             index={index}
-                            onOpen={onOpenSession}
+                            onOpen={open}
                           />
                         </li>
                       ))}
@@ -115,6 +166,38 @@ export function JourneyScreen({
             </button>
           </div>
         ) : null}
+
+        <AnimatePresence>
+          {preview?.previewMarkdown ? (
+            <motion.div
+              className="absolute inset-0 z-20 flex flex-col overflow-y-auto bg-[#f8fafc] p-5"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 12 }}
+              transition={FADE}
+            >
+              <button
+                type="button"
+                onClick={() => setPreview(null)}
+                className="mb-4 self-start rounded-xl px-3 py-2 text-sm font-semibold text-primary-500"
+              >
+                Kembali ke Journey
+              </button>
+              <h2 className="mb-4 text-xl font-bold text-ink">
+                {preview.title}
+              </h2>
+              <article className="w-full rounded-[20px] border border-[#cbd5e1] bg-[#f1f5f9] p-4">
+                <pre className="font-sans text-xs leading-[1.6] whitespace-pre-wrap break-words text-[#475569]">
+                  {preview.previewMarkdown}
+                </pre>
+              </article>
+              <p className="mt-4 text-xs text-subtle">
+                Materi lain tetap dibuat di background. Kuis tersedia setelah
+                generation selesai.
+              </p>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
       </main>
 
       <BottomTabBar active="journey" onSelect={onSelectTab} />
