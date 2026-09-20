@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   type GenerationJob,
   lessonProgressLabel,
+  progressiveLessonState,
 } from "@/features/ingestion/domain/generation-job";
 import {
   captionForGenerationStage,
@@ -240,5 +241,34 @@ describe("lessonProgressLabel", () => {
         progress: { completed: 12, total: 12 },
       }),
     ).toBe("12/12 materi selesai");
+  });
+});
+
+
+describe("progressiveLessonState", () => {
+  const lesson = (
+    orderIndex: number,
+    status: "pending" | "running" | "completed" = "completed",
+  ) => ({
+    conceptId: `c-${orderIndex}`,
+    orderIndex,
+    status,
+    title: `Sesi ${orderIndex}`,
+    contentMarkdown: status === "completed" ? "# Ready" : undefined,
+  });
+
+  it("opens only the first generated lesson before final publish", () => {
+    expect(progressiveLessonState(lesson(1), 1)).toBe("open");
+    expect(progressiveLessonState(lesson(2), 1)).toBe("ready_locked");
+    expect(progressiveLessonState(lesson(3), 1)).toBe("ready_locked");
+  });
+
+  it("does not unlock a later lesson just because it generated first", () => {
+    expect(progressiveLessonState(lesson(3), 1)).toBe("ready_locked");
+  });
+
+  it("keeps unfinished generation states distinct from learner unlock", () => {
+    expect(progressiveLessonState(lesson(1, "running"), 1)).toBe("generating");
+    expect(progressiveLessonState(lesson(1, "pending"), 1)).toBe("pending");
   });
 });
