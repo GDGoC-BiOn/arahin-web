@@ -44,22 +44,37 @@ export function TrackHeader({
         <div
           className="h-2 w-full overflow-hidden rounded-full bg-white/30"
           role="progressbar"
-          aria-valuenow={track.completedCount}
+          aria-valuenow={
+            track.generationProgress?.completed ?? track.completedCount
+          }
           aria-valuemin={0}
-          aria-valuemax={track.totalCount}
-          aria-label="Sesi selesai"
+          aria-valuemax={
+            track.generationProgress?.total ?? track.totalCount
+          }
+          aria-label={
+            track.generationProgress ? "Materi siap" : "Sesi selesai"
+          }
         >
           <motion.div
             className="h-full origin-left rounded-full bg-white"
             initial={false}
-            animate={{ scaleX: track.progress }}
+            animate={{
+              scaleX: track.generationProgress
+                ? track.generationProgress.total === 0
+                  ? 0
+                  : track.generationProgress.completed /
+                    track.generationProgress.total
+                : track.progress,
+            }}
             transition={RAIL_SPRING}
           />
         </div>
       </div>
 
       <p className="text-xs leading-[1.25] text-[#f8fafc]">
-        {track.completedCount}/{track.totalCount} sesi selesai
+        {track.generationProgress
+          ? `${track.generationProgress.completed}/${track.generationProgress.total} materi siap`
+          : `${track.completedCount}/${track.totalCount} sesi selesai`}
       </p>
     </header>
   );
