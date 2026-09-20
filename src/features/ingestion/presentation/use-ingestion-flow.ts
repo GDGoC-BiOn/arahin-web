@@ -7,7 +7,10 @@ import {
   type IngestionUseCases,
   UploadRejectedError,
 } from "../application/ingestion-use-cases";
-import type { GenerationJob } from "../domain/generation-job";
+import {
+  type GenerationJob,
+  lessonProgressLabel,
+} from "../domain/generation-job";
 import { describeFailure, type FailureCopy } from "../domain/ingestion-failure";
 import {
   captionForGenerationStage,
@@ -39,6 +42,7 @@ export function useIngestionFlow(options: {
   const [failure, setFailure] = useState<IngestionFailure | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [stage, setStage] = useState<string | undefined>(undefined);
+  const [job, setJob] = useState<GenerationJob | null>(null);
   const phaseStartedAt = useRef<number>(0);
   const running = useRef(false);
   const lastFile = useRef<File | null>(null);
@@ -71,6 +75,7 @@ export function useIngestionFlow(options: {
 
   const observeJob = useCallback((job: GenerationJob) => {
     setStage(job.stage);
+    setJob(job);
   }, []);
 
   const start = useCallback(
@@ -81,6 +86,7 @@ export function useIngestionFlow(options: {
       setFailure(null);
       setFileName(file.name);
       setStage(undefined);
+      setJob(null);
       phaseStartedAt.current = Date.now();
       setState({ ...INITIAL_INGESTION_STATE, phase: "uploading" });
 
@@ -114,6 +120,7 @@ export function useIngestionFlow(options: {
       .resumeGeneration({
         onPhase: observe,
         onGeneration: observeJob,
+        onResume: (name) => setFileName(name ?? null),
         onUploadProgress: () => {},
       })
       .then((result) => {
@@ -136,6 +143,7 @@ export function useIngestionFlow(options: {
     setFailure(null);
     setFileName(null);
     setStage(undefined);
+    setJob(null);
   }, []);
 
   /** Same file again — for failures on our side, not the file's. */
@@ -146,7 +154,8 @@ export function useIngestionFlow(options: {
   return {
     retry,
     phase: state.phase,
-    percent: ingestionPercent(state),
+    percent: state.phase === "generating" ? null : ingestionPercent(state),
+    lessonProgress: lessonProgressLabel(job),
     steps: ingestionSteps(state),
     caption: captionForGenerationStage(stage, state.phase),
     fileName,

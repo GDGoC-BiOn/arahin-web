@@ -49,6 +49,7 @@ export type IngestionObserver = {
   onPhase(phase: IngestionPhase): void;
   onUploadProgress: UploadProgressListener;
   onGeneration?(job: GenerationJob): void;
+  onResume?(fileName?: string): void;
 };
 
 export type GenerationClock = {
@@ -168,6 +169,7 @@ export function createIngestionUseCases(
     ): Promise<IngestionResult | null> {
       const saved = checkpoint?.load();
       if (!saved) return null;
+      observer.onResume?.(saved.fileName);
       observer.onPhase("generating");
       const result = await waitForGeneration(
         saved.spaceId,

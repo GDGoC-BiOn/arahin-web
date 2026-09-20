@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AppPanel } from "@/shared/presentation/layout/app-panel";
 import {
   type AppTab,
@@ -47,6 +47,19 @@ export function HomeScreen({
   onReview: (review: DueReview) => void;
 }) {
   const [reviews, setReviews] = useState<DueReview[]>([]);
+  const [showProcessing, setShowProcessing] = useState(false);
+  const showProcessingRef = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  const setProcessing = (visible: boolean) => {
+    showProcessingRef.current = visible;
+    setShowProcessing(visible);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -94,18 +107,19 @@ export function HomeScreen({
   const flow = useIngestionFlow({
     useCases,
     onComplete: (result) => {
+      if (!mounted.current) return;
       void loadUploads();
-      onOpenSpace(result.spaceId);
+      if (showProcessingRef.current) onOpenSpace(result.spaceId);
+      setProcessing(false);
     },
   });
 
   return (
     <AppPanel>
-      {/* One container, two views. The file lives in memory for the whole
-            run, so navigating away mid-process is not an option — the views
-            crossfade in place instead. */}
+      {/* Upload and parsing need the file in this tab. Once the durable job
+          starts, the user can return home or navigate elsewhere. */}
       <AnimatePresence initial={false} mode="popLayout">
-        {flow.busy ? (
+        {flow.busy && (flow.phase !== "generating" || showProcessing) ? (
           <motion.div
             key="processing"
             exit={{ opacity: 0 }}
@@ -117,6 +131,12 @@ export function HomeScreen({
               caption={flow.caption}
               steps={flow.steps}
               fileName={flow.fileName}
+              lessonProgress={flow.lessonProgress}
+              onLeave={
+                flow.phase === "generating"
+                  ? () => setProcessing(false)
+                  : undefined
+              }
             />
           </motion.div>
         ) : (
@@ -130,7 +150,38 @@ export function HomeScreen({
           >
             <HomeHeadline />
             <HomeSearch value={query} onChange={setQuery} />
-            <UploadDropzone onFile={(file) => void flow.start(file)} />
+            {flow.phase === "generating" ? (
+              <section
+                role="status"
+                className="rounded-2xl border border-primary-500/20 bg-[#eef3ff] p-4 text-sm text-secondary-500"
+              >
+                <p className="font-semibold">
+                  Materi sedang disiapkan di background
+                </p>
+                <p className="mt-1 text-subtle">
+                  {flow.fileName ?? "Dokumen"} ·{" "}
+                  {flow.lessonProgress ?? flow.caption}
+                </p>
+                <p className="mt-1 text-xs text-subtle">
+                  Kamu boleh pindah halaman atau refresh. Hasil akan muncul di
+                  unggahan terbaru saat siap.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setProcessing(true)}
+                  className="mt-3 font-semibold text-primary-500"
+                >
+                  Lihat proses
+                </button>
+              </section>
+            ) : null}
+            <UploadDropzone
+              disabled={flow.busy}
+              onFile={(file) => {
+                setProcessing(true);
+                void flow.start(file);
+              }}
+            />
             {searched ? null : (
               <DueReviews reviews={reviews} onOpen={onReview} />
             )}
