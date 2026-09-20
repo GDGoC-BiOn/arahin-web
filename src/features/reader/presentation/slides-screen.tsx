@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronLeftIcon,
   ChevronRightSmallIcon,
@@ -37,7 +37,17 @@ export function SlidesScreen({
   );
   const [[index, direction], setPage] = useState<[number, number]>([0, 0]);
   const stage = useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const slide = slides[index] ?? slides[0];
+
+  useEffect(() => {
+    const syncFullscreen = () => {
+      setIsFullscreen(document.fullscreenElement === stage.current);
+    };
+    document.addEventListener("fullscreenchange", syncFullscreen);
+    return () =>
+      document.removeEventListener("fullscreenchange", syncFullscreen);
+  }, []);
 
   const go = (delta: number) => {
     const next = Math.min(Math.max(index + delta, 0), slides.length - 1);
@@ -128,6 +138,44 @@ export function SlidesScreen({
             ref={stage}
             className="relative w-full max-w-[350px] overflow-hidden rounded-[20px] border border-[#cbd5e1] bg-[#f1f5f9] p-4 fullscreen:flex fullscreen:max-w-none fullscreen:items-center fullscreen:justify-center fullscreen:rounded-none fullscreen:bg-[#0f172a] fullscreen:p-8"
           >
+            {isFullscreen ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => void document.exitFullscreen()}
+                  aria-label="Tutup layar penuh"
+                  className="absolute top-3 right-3 z-10 rounded-full bg-white px-3 py-1.5 text-sm font-bold text-[#0f172a]"
+                >
+                  Tutup ×
+                </button>
+                <div className="absolute inset-x-0 bottom-3 z-10 flex justify-center gap-4">
+                  <button
+                    type="button"
+                    onClick={() => go(-1)}
+                    disabled={index === 0}
+                    aria-label="Slide sebelumnya di layar penuh"
+                    className="rounded-full bg-white px-3 py-2 text-sm font-semibold text-[#0f172a] disabled:opacity-40"
+                  >
+                    Sebelumnya
+                  </button>
+                  <span
+                    className="rounded-full bg-white px-3 py-2 text-sm font-semibold text-[#0f172a]"
+                    aria-live="polite"
+                  >
+                    {index + 1}/{slides.length}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => go(1)}
+                    disabled={index === slides.length - 1}
+                    aria-label="Slide berikutnya di layar penuh"
+                    className="rounded-full bg-white px-3 py-2 text-sm font-semibold text-[#0f172a] disabled:opacity-40"
+                  >
+                    Berikutnya
+                  </button>
+                </div>
+              </>
+            ) : null}
             <AnimatePresence
               initial={false}
               custom={direction}
