@@ -20,7 +20,13 @@ export function HomeFeature({ greetingName }: { greetingName: string }) {
       greetingName={greetingName}
       // The space detail and the Journey/Profil tabs are not built yet; the
       // routes are named now so the wiring is real once those screens land.
-      onOpenSpace={(spaceId) => router.push(`/ruang/${spaceId}`)}
+      onOpenSpace={(spaceId, generationId) =>
+        router.push(
+          generationId
+            ? `/ruang/${spaceId}?generation=${encodeURIComponent(generationId)}`
+            : `/ruang/${spaceId}`,
+        )
+      }
       onSignIn={() => router.push("/masuk")}
       onReview={(review) =>
         router.push(`/sesi/${review.lessonId}/kuis?ruang=${review.spaceId}`)
