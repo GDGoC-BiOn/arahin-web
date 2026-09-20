@@ -2,8 +2,8 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import { useMemo, useState } from "react";
-import { LessonBody } from "@/features/reader/presentation/lesson-body";
 import { parseLessonContent } from "@/features/reader/domain/lesson-content";
+import { LessonBody } from "@/features/reader/presentation/lesson-body";
 import { BrainIcon, CheckSmallIcon } from "@/shared/presentation/icons";
 import type { GenerationLessonTask } from "../domain/generation-job";
 import type { IngestionStep } from "../domain/ingestion-progress";
@@ -130,7 +130,6 @@ export function ProcessingScreen({
     </motion.div>
   );
 }
-
 
 function LessonGenerationStepper({
   lessons,
