@@ -54,8 +54,7 @@ export function buildProgressiveTimeline(
         position: index + 1,
         title:
           lesson.title ??
-          (lesson.status === "running" ||
-          lesson.status === "retryable_failed"
+          (lesson.status === "running" || lesson.status === "retryable_failed"
             ? "Sedang dibuat…"
             : "Menunggu giliran…"),
         status: firstReady ? ("current" as const) : ("locked" as const),
