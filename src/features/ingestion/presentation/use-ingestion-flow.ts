@@ -42,6 +42,7 @@ export function useIngestionFlow(options: {
   const [failure, setFailure] = useState<IngestionFailure | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [stage, setStage] = useState<string | undefined>(undefined);
+  const [generation, setGeneration] = useState<GenerationJob | null>(null);
   const [job, setJob] = useState<GenerationJob | null>(null);
   const phaseStartedAt = useRef<number>(0);
   const running = useRef(false);
@@ -162,6 +163,8 @@ export function useIngestionFlow(options: {
     caption: captionForGenerationStage(stage, state.phase),
     fileName,
     failure,
+    generation,
+    lessons: generation?.lessons ?? [],
     canRetry: lastFile.current !== null,
     busy: state.phase !== "idle" && state.phase !== "failed",
     start,
