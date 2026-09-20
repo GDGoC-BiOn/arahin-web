@@ -151,8 +151,7 @@ function LessonGenerationStepper({
           const completed =
             lesson.status === "completed" && Boolean(lesson.contentMarkdown);
           const active =
-            lesson.status === "running" ||
-            lesson.status === "retryable_failed";
+            lesson.status === "running" || lesson.status === "retryable_failed";
           return (
             <li key={lesson.conceptId}>
               <button
