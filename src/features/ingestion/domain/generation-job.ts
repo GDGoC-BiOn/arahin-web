@@ -77,3 +77,28 @@ export function lessonProgressLabel(job: GenerationJob | null): string | null {
   if (job.progress.total < 1) return null;
   return `${job.progress.completed}/${job.progress.total} materi selesai`;
 }
+
+
+export type ProgressiveLessonState =
+  | "open"
+  | "ready_locked"
+  | "generating"
+  | "pending";
+
+export function progressiveLessonState(
+  lesson: GenerationLessonTask,
+  firstOrderIndex: number | undefined,
+): ProgressiveLessonState {
+  if (
+    lesson.status === "completed" &&
+    lesson.contentMarkdown &&
+    lesson.orderIndex === firstOrderIndex
+  ) {
+    return "open";
+  }
+  if (lesson.status === "completed") return "ready_locked";
+  if (lesson.status === "running" || lesson.status === "retryable_failed") {
+    return "generating";
+  }
+  return "pending";
+}
