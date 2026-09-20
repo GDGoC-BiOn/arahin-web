@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { httpClient } from "@/shared/infrastructure/http/client";
 import { createJourneyUseCases } from "./application/journey-use-cases";
 import { createBrowserJourneyGateway } from "./infrastructure/browser-journey-gateway";
@@ -10,10 +10,14 @@ const useCases = createJourneyUseCases(createBrowserJourneyGateway(httpClient));
 
 export function JourneyFeature({ spaceId }: { spaceId: string }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const generationId = searchParams.get("generation");
+
   return (
     <JourneyScreen
       useCases={useCases}
       spaceId={spaceId}
+      generationId={generationId}
       onBack={() => router.push("/beranda")}
       // The space rides along so the session can get back to this timeline
       // without another lookup.

@@ -41,7 +41,7 @@ export function HomeScreen({
 }: {
   useCases: IngestionUseCases;
   greetingName: string;
-  onOpenSpace: (spaceId: string) => void;
+  onOpenSpace: (spaceId: string, generationId?: string) => void;
   onSelectTab: (tab: AppTab) => void;
   onSignIn: () => void;
   onReview: (review: DueReview) => void;
@@ -99,6 +99,10 @@ export function HomeScreen({
 
   const flow = useIngestionFlow({
     useCases,
+    onFirstLessonReady: (job) => {
+      if (!mounted.current) return;
+      onOpenSpace(job.spaceId, job.generationId);
+    },
     onComplete: (result) => {
       if (!mounted.current) return;
       void loadUploads();
