@@ -26,6 +26,8 @@ export type TimelineSession = {
   status: SessionStatus;
   /** Alternating sides, as in the design. */
   side: "left" | "right";
+  /** Present only for a generated staging lesson before atomic final publish. */
+  previewMarkdown?: string;
 };
 
 export type TimelineTrack = {
@@ -39,4 +41,9 @@ export type TimelineTrack = {
   progress: number;
   /** The space's mastery, 0-100, once any graded activity was submitted. */
   mastery?: number | null;
+  /** Generation readiness while the final curriculum is still being built. */
+  generationProgress?: {
+    completed: number;
+    total: number;
+  };
 };
