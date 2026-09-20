@@ -132,11 +132,7 @@ export function HomeScreen({
               steps={flow.steps}
               fileName={flow.fileName}
               lessonProgress={flow.lessonProgress}
-              onLeave={
-                flow.phase === "generating"
-                  ? () => setProcessing(false)
-                  : undefined
-              }
+              onLeave={flow.durable ? () => setProcessing(false) : undefined}
             />
           </motion.div>
         ) : (
@@ -205,7 +201,9 @@ export function HomeScreen({
         onSignIn={onSignIn}
       />
 
-      <BottomTabBar active="home" onSelect={onSelectTab} />
+      {!flow.busy || flow.durable ? (
+        <BottomTabBar active="home" onSelect={onSelectTab} />
+      ) : null}
     </AppPanel>
   );
 }
