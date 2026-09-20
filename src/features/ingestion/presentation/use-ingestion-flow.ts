@@ -36,8 +36,9 @@ const OPEN_ENDED: IngestionPhase[] = ["uploading", "parsing", "generating"];
 export function useIngestionFlow(options: {
   useCases: IngestionUseCases;
   onComplete: (result: IngestionResult) => void;
+  onFirstLessonReady?: (job: GenerationJob) => void;
 }) {
-  const { useCases, onComplete } = options;
+  const { useCases, onComplete, onFirstLessonReady } = options;
   const [state, setState] = useState<IngestionState>(INITIAL_INGESTION_STATE);
   const [failure, setFailure] = useState<IngestionFailure | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -46,6 +47,7 @@ export function useIngestionFlow(options: {
   const phaseStartedAt = useRef<number>(0);
   const running = useRef(false);
   const lastFile = useRef<File | null>(null);
+  const handedOffToJourney = useRef(false);
 
   /**
    * Only the open-ended phases need a ticker, and 200ms is plenty: the bar's
@@ -73,10 +75,28 @@ export function useIngestionFlow(options: {
     if (phase !== "generating") setStage(undefined);
   }, []);
 
-  const observeJob = useCallback((job: GenerationJob) => {
-    setStage(job.stage);
-    setJob(job);
-  }, []);
+  const observeJob = useCallback(
+    (job: GenerationJob) => {
+      setStage(job.stage);
+      setJob(job);
+
+      if (!handedOffToJourney.current && onFirstLessonReady) {
+        const ordered = [...(job.lessons ?? [])].sort(
+          (a, b) => a.orderIndex - b.orderIndex,
+        );
+        const first = ordered[0];
+        if (
+          first?.status === "completed" &&
+          first.contentMarkdown &&
+          job.status === "running"
+        ) {
+          handedOffToJourney.current = true;
+          onFirstLessonReady(job);
+        }
+      }
+    },
+    [onFirstLessonReady],
+  );
 
   const start = useCallback(
     async (file: File) => {
@@ -87,6 +107,7 @@ export function useIngestionFlow(options: {
       setFileName(file.name);
       setStage(undefined);
       setJob(null);
+      handedOffToJourney.current = false;
       phaseStartedAt.current = Date.now();
       setState({ ...INITIAL_INGESTION_STATE, phase: "uploading" });
 
@@ -144,6 +165,7 @@ export function useIngestionFlow(options: {
     setFileName(null);
     setStage(undefined);
     setJob(null);
+    handedOffToJourney.current = false;
   }, []);
 
   /** Same file again — for failures on our side, not the file's. */
