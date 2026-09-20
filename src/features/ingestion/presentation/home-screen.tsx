@@ -47,8 +47,6 @@ export function HomeScreen({
   onReview: (review: DueReview) => void;
 }) {
   const [reviews, setReviews] = useState<DueReview[]>([]);
-  const [showProcessing, setShowProcessing] = useState(false);
-  const showProcessingRef = useRef(false);
   const mounted = useRef(true);
   useEffect(() => {
     mounted.current = true;
@@ -56,11 +54,6 @@ export function HomeScreen({
       mounted.current = false;
     };
   }, []);
-  const setProcessing = (visible: boolean) => {
-    showProcessingRef.current = visible;
-    setShowProcessing(visible);
-  };
-
   useEffect(() => {
     let cancelled = false;
     useCases
@@ -109,17 +102,16 @@ export function HomeScreen({
     onComplete: (result) => {
       if (!mounted.current) return;
       void loadUploads();
-      if (showProcessingRef.current) onOpenSpace(result.spaceId);
-      setProcessing(false);
+      onOpenSpace(result.spaceId);
     },
   });
 
   return (
     <AppPanel>
-      {/* Upload and parsing need the file in this tab. Once the durable job
-          starts, the user can return home or navigate elsewhere. */}
+      {/* Keep the familiar full-screen loading shell while the durable job
+          runs; completed lesson previews become interactive inside it. */}
       <AnimatePresence initial={false} mode="popLayout">
-        {flow.busy && (flow.phase !== "generating" || showProcessing) ? (
+        {flow.busy ? (
           <motion.div
             key="processing"
             exit={{ opacity: 0 }}
@@ -132,7 +124,7 @@ export function HomeScreen({
               steps={flow.steps}
               fileName={flow.fileName}
               lessonProgress={flow.lessonProgress}
-              onLeave={flow.durable ? () => setProcessing(false) : undefined}
+              lessons={flow.lessons}
             />
           </motion.div>
         ) : (
@@ -146,35 +138,9 @@ export function HomeScreen({
           >
             <HomeHeadline />
             <HomeSearch value={query} onChange={setQuery} />
-            {flow.phase === "generating" ? (
-              <section
-                role="status"
-                className="rounded-2xl border border-primary-500/20 bg-[#eef3ff] p-4 text-sm text-secondary-500"
-              >
-                <p className="font-semibold">
-                  Materi sedang disiapkan di background
-                </p>
-                <p className="mt-1 text-subtle">
-                  {flow.fileName ?? "Dokumen"} ·{" "}
-                  {flow.lessonProgress ?? flow.caption}
-                </p>
-                <p className="mt-1 text-xs text-subtle">
-                  Kamu boleh pindah halaman atau refresh. Hasil akan muncul di
-                  unggahan terbaru saat siap.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setProcessing(true)}
-                  className="mt-3 font-semibold text-primary-500"
-                >
-                  Lihat proses
-                </button>
-              </section>
-            ) : null}
             <UploadDropzone
               disabled={flow.busy}
               onFile={(file) => {
-                setProcessing(true);
                 void flow.start(file);
               }}
             />
@@ -202,7 +168,7 @@ export function HomeScreen({
         onSignIn={onSignIn}
       />
 
-      {!flow.busy || flow.durable ? (
+      {!flow.busy ? (
         <BottomTabBar active="home" onSelect={onSelectTab} />
       ) : null}
     </AppPanel>
