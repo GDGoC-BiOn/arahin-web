@@ -108,8 +108,8 @@ export function HomeScreen({
 
   return (
     <AppPanel>
-      {/* Upload and parsing need the file in this tab. Once the durable job
-          starts, the user can return home or navigate elsewhere. */}
+      {/* Keep the familiar full-screen loading shell while the durable job
+          runs; completed lesson previews become interactive inside it. */}
       <AnimatePresence initial={false} mode="popLayout">
         {flow.busy ? (
           <motion.div
@@ -138,7 +138,6 @@ export function HomeScreen({
           >
             <HomeHeadline />
             <HomeSearch value={query} onChange={setQuery} />
-}
             <UploadDropzone
               disabled={flow.busy}
               onFile={(file) => {
