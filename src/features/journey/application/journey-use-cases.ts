@@ -1,4 +1,5 @@
 import type { JourneyGateway } from "../domain/journey-gateway";
+import { buildProgressiveTimeline } from "../domain/progressive-generation";
 import type { TimelineTrack } from "../domain/session";
 import { buildTimeline } from "../domain/timeline";
 
@@ -14,6 +15,13 @@ export function createJourneyUseCases(gateway: JourneyGateway) {
         .slice()
         .sort((a, b) => a.orderIndex - b.orderIndex)
         .map((track) => ({ ...buildTimeline(track), mastery }));
+    },
+    async loadGenerationTimeline(spaceId: string, generationId: string) {
+      const job = await gateway.loadGeneration(spaceId, generationId);
+      return {
+        job,
+        track: buildProgressiveTimeline(job),
+      };
     },
   };
 }
