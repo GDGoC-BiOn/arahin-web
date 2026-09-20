@@ -156,6 +156,7 @@ export function useIngestionFlow(options: {
     phase: state.phase,
     percent: state.phase === "generating" ? null : ingestionPercent(state),
     lessonProgress: lessonProgressLabel(job),
+    durable: Boolean(job?.generationId),
     steps: ingestionSteps(state),
     caption: captionForGenerationStage(stage, state.phase),
     fileName,
