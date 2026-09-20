@@ -157,10 +157,7 @@ export function SlidesScreen({
                   </h3>
                   <ul className="flex min-h-0 flex-1 list-disc flex-col gap-1 overflow-y-auto overscroll-y-contain pl-4 text-[10px] leading-[1.45] text-[#475569]">
                     {slide.bullets.map((bullet) => (
-                      <li
-                        key={`${slide.id}-${bullet}`}
-                        className="break-words"
-                      >
+                      <li key={`${slide.id}-${bullet}`} className="break-words">
                         {bullet}
                       </li>
                     ))}
