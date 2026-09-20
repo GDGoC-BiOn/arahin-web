@@ -1,0 +1,58 @@
+name: Deploy
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  PROJECT_ID: arahin-509007
+  REGION: asia-southeast1
+  SERVICE: arahin
+  WIF_PROVIDER: projects/244244141714/locations/global/workloadIdentityPools/github-actions/providers/github
+  CI_SA: gh-actions-deployer@arahin-509007.iam.gserviceaccount.com
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.CI_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Build and push image
+        id: image
+        run: |
+          TAG="${GITHUB_SHA:0:7}"
+          IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/arahin/arahin-web:${TAG}"
+          if gcloud artifacts docker images describe "$IMAGE" --project "$PROJECT_ID" >/dev/null 2>&1; then
+            echo "$IMAGE already exists, skipping build"
+          else
+            gcloud builds submit . --tag "$IMAGE" --project "$PROJECT_ID"
+          fi
+          echo "uri=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy Cloud Run frontend
+        run: |
+          gcloud run services update "$SERVICE" \
+            --image "${{ steps.image.outputs.uri }}" \
+            --region "$REGION" \
+            --project "$PROJECT_ID" \
+            --quiet
+
+      - name: Verify serving revision
+        run: |
+          URL=$(gcloud run services describe "$SERVICE" --region "$REGION" --project "$PROJECT_ID" --format='value(status.url)')
+          READY=$(gcloud run services describe "$SERVICE" --region "$REGION" --project "$PROJECT_ID" --format='value(status.latestReadyRevisionName)')
+          echo "url=$URL"
+          echo "ready_revision=$READY"
+          curl --max-time 20 -fsS -o /dev/null "$URL/masuk"
