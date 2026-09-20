@@ -48,12 +48,8 @@ export function TrackHeader({
             track.generationProgress?.completed ?? track.completedCount
           }
           aria-valuemin={0}
-          aria-valuemax={
-            track.generationProgress?.total ?? track.totalCount
-          }
-          aria-label={
-            track.generationProgress ? "Materi siap" : "Sesi selesai"
-          }
+          aria-valuemax={track.generationProgress?.total ?? track.totalCount}
+          aria-label={track.generationProgress ? "Materi siap" : "Sesi selesai"}
         >
           <motion.div
             className="h-full origin-left rounded-full bg-white"
