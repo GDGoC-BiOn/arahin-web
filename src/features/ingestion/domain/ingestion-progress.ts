@@ -1,3 +1,5 @@
+import type { GenerationJob } from "./generation-job";
+
 /**
  * Progress model for the "AI sedang memproses" screen.
  *
@@ -98,10 +100,28 @@ function asymptotic(from: number, to: number, elapsedMs: number, tau: number) {
   return from + (to - from) * share;
 }
 
-export function ingestionPercent(state: IngestionState): number {
+export function ingestionPercent(
+  state: IngestionState,
+  generation?: Pick<GenerationJob, "stage" | "progress">,
+): number {
   if (state.phase === "failed") return 0;
   if (state.phase === "done") return 100;
   if (state.phase === "idle") return 0;
+
+  if (
+    state.phase === "generating" &&
+    generation?.stage === "generating_lessons" &&
+    generation.progress.total > 0
+  ) {
+    const completed = Math.min(
+      Math.max(generation.progress.completed, 0),
+      generation.progress.total,
+    );
+    const share = completed / generation.progress.total;
+    // Extraction/reconciliation has already finished by this stage.
+    // The remaining quarter of the bar is real per-lesson durable progress.
+    return Math.min(70 + Math.floor(share * 25), 94);
+  }
 
   const range = PHASE_RANGE[state.phase];
   if (state.phase === "uploading") {
