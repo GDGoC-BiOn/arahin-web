@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { TrackSummary } from "@/features/journey/domain/session";
 import { buildProgressiveTimeline } from "@/features/journey/domain/progressive-generation";
+import type { TrackSummary } from "@/features/journey/domain/session";
 import {
   buildTimeline,
   railProgress,
@@ -164,7 +164,6 @@ describe("railProgress", () => {
     expect(railProgress(buildTimeline(withDone(track(1), ["l1"])))).toBe(1);
   });
 });
-
 
 describe("buildProgressiveTimeline", () => {
   it("opens only session one while later generated lessons stay locked", () => {
