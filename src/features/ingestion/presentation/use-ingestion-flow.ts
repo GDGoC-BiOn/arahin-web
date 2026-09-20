@@ -149,7 +149,8 @@ export function useIngestionFlow(options: {
   /** Same file again — for failures on our side, not the file's. */
   const retry = useCallback(() => {
     if (lastFile.current) void start(lastFile.current);
-  }, [start]);
+    else reset();
+  }, [reset, start]);
 
   return {
     retry,
@@ -161,6 +162,7 @@ export function useIngestionFlow(options: {
     caption: captionForGenerationStage(stage, state.phase),
     fileName,
     failure,
+    canRetry: lastFile.current !== null,
     busy: state.phase !== "idle" && state.phase !== "failed",
     start,
     reset,
