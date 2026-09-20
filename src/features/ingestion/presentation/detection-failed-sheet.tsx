@@ -36,11 +36,13 @@ const REASONS = [
  */
 export function DetectionFailedSheet({
   failure,
+  canRetry,
   onRetry,
   onHome,
   onSignIn,
 }: {
   failure: IngestionFailure | null;
+  canRetry: boolean;
   onRetry: () => void;
   onHome: () => void;
   onSignIn: () => void;
@@ -142,7 +144,7 @@ export function DetectionFailedSheet({
               >
                 {failure.kind === "session"
                   ? "Masuk Lagi"
-                  : failure.kind === "service"
+                  : failure.kind === "service" && canRetry
                     ? "Coba Lagi"
                     : "Coba File Lain"}
               </motion.button>
