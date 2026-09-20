@@ -21,6 +21,20 @@ export type GenerationProgress = {
   total: number;
 };
 
+export type GenerationLessonTaskStatus =
+  | "pending"
+  | "running"
+  | "completed"
+  | "failed";
+
+export type GenerationLessonTask = {
+  conceptId: string;
+  orderIndex: number;
+  status: GenerationLessonTaskStatus;
+  title?: string;
+  contentMarkdown?: string;
+};
+
 export type GenerationJob = {
   generationId: string;
   spaceId: string;
@@ -30,6 +44,7 @@ export type GenerationJob = {
   errorCode?: string;
   errorMessage?: string;
   result?: GeneratedBlueprint;
+  lessons?: GenerationLessonTask[];
 };
 
 export const GENERATION_POLL_MS = 2_500;
