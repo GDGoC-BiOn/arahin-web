@@ -1,7 +1,11 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
+import { useMemo, useState } from "react";
+import { LessonBody } from "@/features/reader/presentation/lesson-body";
+import { parseLessonContent } from "@/features/reader/domain/lesson-content";
 import { BrainIcon, CheckSmallIcon } from "@/shared/presentation/icons";
+import type { GenerationLessonTask } from "../domain/generation-job";
 import type { IngestionStep } from "../domain/ingestion-progress";
 import { FADE, PROGRESS_SPRING, STEP_SPRING } from "./motion-tokens";
 
@@ -17,15 +21,21 @@ export function ProcessingScreen({
   steps,
   fileName,
   lessonProgress,
-  onLeave,
+  lessons,
 }: {
-  percent: number | null;
+  percent: number;
   caption: string;
   steps: IngestionStep[];
   fileName: string | null;
   lessonProgress: string | null;
-  onLeave?: () => void;
+  lessons: GenerationLessonTask[];
 }) {
+  const [selected, setSelected] = useState<GenerationLessonTask | null>(null);
+  const previewSections = useMemo(
+    () => parseLessonContent(selected?.contentMarkdown ?? ""),
+    [selected],
+  );
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -58,48 +68,143 @@ export function ProcessingScreen({
         ) : null}
       </div>
 
-      {percent === null ? (
-        <p role="status" className="text-sm font-semibold text-primary-500">
-          {lessonProgress ?? "Menunggu materi pertama selesai…"}
-        </p>
-      ) : (
-        <div className="flex w-full flex-col gap-1.5">
-          <div
-            className="h-2 w-full overflow-hidden rounded-full bg-[#f0f0f0]"
-            role="progressbar"
-            aria-valuenow={percent}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label="Progres pemrosesan"
-          >
-            <motion.div
-              className="h-full origin-left rounded-full bg-primary-500"
-              initial={false}
-              animate={{ scaleX: percent / 100 }}
-              transition={PROGRESS_SPRING}
-            />
-          </div>
-          <p className="self-end pt-2 text-xs text-subtle">{percent}%</p>
-        </div>
-      )}
-      {onLeave ? (
-        <button
-          type="button"
-          onClick={onLeave}
-          className="rounded-xl px-4 py-2 text-sm font-semibold text-primary-500"
+      <div className="flex w-full flex-col gap-1.5">
+        <div
+          className="h-2 w-full overflow-hidden rounded-full bg-[#f0f0f0]"
+          role="progressbar"
+          aria-valuenow={percent}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="Progres pemrosesan"
         >
-          Kembali ke Beranda · lanjut di background
-        </button>
-      ) : null}
+          <motion.div
+            className="h-full origin-left rounded-full bg-primary-500"
+            initial={false}
+            animate={{ scaleX: percent / 100 }}
+            transition={PROGRESS_SPRING}
+          />
+        </div>
+        <p className="self-end pt-2 text-xs text-subtle">{percent}%</p>
+      </div>
 
-      {percent !== null ? (
+      {lessons.length > 0 ? (
+        <LessonGenerationStepper
+          lessons={lessons}
+          label={lessonProgress}
+          onOpen={setSelected}
+        />
+      ) : (
         <ol className="flex w-full flex-col gap-4">
           {steps.map((step) => (
             <StepRow key={step.id} step={step} />
           ))}
         </ol>
-      ) : null}
+      )}
+
+      <AnimatePresence>
+        {selected?.contentMarkdown ? (
+          <motion.div
+            className="absolute inset-0 z-20 flex flex-col overflow-y-auto bg-[#f8fafc] p-5"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 12 }}
+            transition={FADE}
+          >
+            <button
+              type="button"
+              onClick={() => setSelected(null)}
+              className="mb-4 self-start rounded-xl px-3 py-2 text-sm font-semibold text-primary-500"
+            >
+              Kembali ke proses
+            </button>
+            <h2 className="mb-4 text-xl font-bold text-ink">
+              {selected.title || "Materi"}
+            </h2>
+            <LessonBody sections={previewSections} />
+            <p className="mt-4 text-xs text-subtle">
+              Preview materi. Kuis tersedia setelah seluruh generation selesai.
+            </p>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </motion.div>
+  );
+}
+
+
+function LessonGenerationStepper({
+  lessons,
+  label,
+  onOpen,
+}: {
+  lessons: GenerationLessonTask[];
+  label: string | null;
+  onOpen: (lesson: GenerationLessonTask) => void;
+}) {
+  const ordered = [...lessons].sort((a, b) => a.orderIndex - b.orderIndex);
+  return (
+    <div className="flex w-full flex-col gap-3">
+      {label ? (
+        <p className="text-sm font-semibold text-primary-500">{label}</p>
+      ) : null}
+      <ol className="flex max-h-56 w-full flex-col gap-2 overflow-y-auto pr-1">
+        {ordered.map((lesson) => {
+          const completed =
+            lesson.status === "completed" && Boolean(lesson.contentMarkdown);
+          const active =
+            lesson.status === "running" ||
+            lesson.status === "retryable_failed";
+          return (
+            <li key={lesson.conceptId}>
+              <button
+                type="button"
+                disabled={!completed}
+                onClick={() => onOpen(lesson)}
+                className="flex w-full items-center gap-3 rounded-2xl border border-[#e2e8f0] bg-white px-3 py-2.5 text-left disabled:cursor-default"
+              >
+                <span
+                  className={
+                    "flex size-6 shrink-0 items-center justify-center rounded-full " +
+                    (completed
+                      ? "bg-[#31c277] text-white"
+                      : active
+                        ? "bg-[#eaf0fc] text-primary-500"
+                        : "bg-[#f1f5f9] text-[#94a3b8]")
+                  }
+                >
+                  {completed ? (
+                    <CheckSmallIcon className="size-[13px]" />
+                  ) : (
+                    <span
+                      className={
+                        "block rounded-full " +
+                        (active
+                          ? "size-2.5 bg-primary-500"
+                          : "size-2 bg-[#cbd5e1]")
+                      }
+                    />
+                  )}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-xs font-semibold text-ink">
+                    Sesi {lesson.orderIndex}
+                  </span>
+                  <span className="block truncate text-xs text-subtle">
+                    {lesson.title ||
+                      (active ? "Sedang dibuat…" : "Menunggu giliran…")}
+                  </span>
+                </span>
+                {completed ? (
+                  <span className="text-xs font-semibold text-primary-500">
+                    Buka
+                  </span>
+                ) : null}
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
   );
 }
 
