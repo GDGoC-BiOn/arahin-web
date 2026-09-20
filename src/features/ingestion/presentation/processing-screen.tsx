@@ -1,9 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { useMemo, useState } from "react";
-import { parseLessonContent } from "@/features/reader/domain/lesson-content";
-import { LessonBody } from "@/features/reader/presentation/lesson-body";
+import { useState } from "react";
 import { BrainIcon, CheckSmallIcon } from "@/shared/presentation/icons";
 import type { GenerationLessonTask } from "../domain/generation-job";
 import type { IngestionStep } from "../domain/ingestion-progress";
@@ -31,10 +29,6 @@ export function ProcessingScreen({
   lessons: GenerationLessonTask[];
 }) {
   const [selected, setSelected] = useState<GenerationLessonTask | null>(null);
-  const previewSections = useMemo(
-    () => parseLessonContent(selected?.contentMarkdown ?? ""),
-    [selected],
-  );
 
   return (
     <motion.div
@@ -120,7 +114,11 @@ export function ProcessingScreen({
             <h2 className="mb-4 text-xl font-bold text-ink">
               {selected.title || "Materi"}
             </h2>
-            <LessonBody sections={previewSections} />
+            <article className="w-full rounded-[20px] border border-[#cbd5e1] bg-[#f1f5f9] p-4">
+              <pre className="font-sans text-xs leading-[1.6] whitespace-pre-wrap break-words text-[#475569]">
+                {selected.contentMarkdown}
+              </pre>
+            </article>
             <p className="mt-4 text-xs text-subtle">
               Preview materi. Kuis tersedia setelah seluruh generation selesai.
             </p>
