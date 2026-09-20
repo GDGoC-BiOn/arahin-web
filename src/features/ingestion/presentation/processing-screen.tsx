@@ -2,8 +2,15 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
-import { BrainIcon, CheckSmallIcon } from "@/shared/presentation/icons";
-import type { GenerationLessonTask } from "../domain/generation-job";
+import {
+  BrainIcon,
+  LockIcon,
+  SparklesIcon,
+} from "@/shared/presentation/icons";
+import {
+  type GenerationLessonTask,
+  progressiveLessonState,
+} from "../domain/generation-job";
 import type { IngestionStep } from "../domain/ingestion-progress";
 import { FADE, PROGRESS_SPRING, STEP_SPRING } from "./motion-tokens";
 
@@ -146,30 +153,37 @@ function LessonGenerationStepper({
       ) : null}
       <ol className="flex max-h-56 w-full flex-col gap-2 overflow-y-auto pr-1">
         {ordered.map((lesson) => {
-          const completed =
-            lesson.status === "completed" && Boolean(lesson.contentMarkdown);
-          const active =
-            lesson.status === "running" || lesson.status === "retryable_failed";
+          const state = progressiveLessonState(
+            lesson,
+            ordered[0]?.orderIndex,
+          );
+          const canOpen = state === "open";
+          const generated = state === "open" || state === "ready_locked";
+          const active = state === "generating";
           return (
             <li key={lesson.conceptId}>
               <button
                 type="button"
-                disabled={!completed}
+                disabled={!canOpen}
                 onClick={() => onOpen(lesson)}
                 className="flex w-full items-center gap-3 rounded-2xl border border-[#e2e8f0] bg-white px-3 py-2.5 text-left disabled:cursor-default"
               >
                 <span
                   className={
                     "flex size-6 shrink-0 items-center justify-center rounded-full " +
-                    (completed
-                      ? "bg-[#31c277] text-white"
-                      : active
-                        ? "bg-[#eaf0fc] text-primary-500"
-                        : "bg-[#f1f5f9] text-[#94a3b8]")
+                    (canOpen
+                      ? "bg-primary-500 text-white"
+                      : generated
+                        ? "bg-[#f1f5f9] text-[#94a3b8]"
+                        : active
+                          ? "bg-[#eaf0fc] text-primary-500"
+                          : "bg-[#f1f5f9] text-[#94a3b8]")
                   }
                 >
-                  {completed ? (
-                    <CheckSmallIcon className="size-[13px]" />
+                  {canOpen ? (
+                    <SparklesIcon className="size-[13px]" />
+                  ) : generated ? (
+                    <LockIcon className="size-[13px]" />
                   ) : (
                     <span
                       className={
@@ -190,9 +204,13 @@ function LessonGenerationStepper({
                       (active ? "Sedang dibuat…" : "Menunggu giliran…")}
                   </span>
                 </span>
-                {completed ? (
+                {canOpen ? (
                   <span className="text-xs font-semibold text-primary-500">
                     Buka
+                  </span>
+                ) : generated ? (
+                  <span className="text-xs font-medium text-[#94a3b8]">
+                    Terkunci
                   </span>
                 ) : null}
               </button>
