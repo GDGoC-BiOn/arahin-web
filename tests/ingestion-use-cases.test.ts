@@ -94,7 +94,11 @@ function harness(
     onGeneration: (job) => jobs.push(job),
   };
   const useCases = createIngestionUseCases(gateway, {
-    clock: { wait: async (ms) => { waits.push(ms); } },
+    clock: {
+      wait: async (ms) => {
+        waits.push(ms);
+      },
+    },
     checkpoint: extras.checkpoint,
   });
   return { gateway, observer, phases, fractions, jobs, waits, useCases };
