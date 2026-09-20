@@ -38,7 +38,7 @@ export function ReaderScreen({
     <AppPanel surface="bg-[#f8fafc]">
       <main
         id="main"
-        className="relative flex flex-1 flex-col overflow-y-auto pb-32"
+        className="relative flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain pb-32"
       >
         {/* The soft wash behind the title, as in the design. */}
         <span
