@@ -196,6 +196,7 @@ export function HomeScreen({
 
       <DetectionFailedSheet
         failure={flow.failure}
+        canRetry={flow.canRetry}
         onRetry={flow.failure?.kind === "service" ? flow.retry : flow.reset}
         onHome={flow.reset}
         onSignIn={onSignIn}
