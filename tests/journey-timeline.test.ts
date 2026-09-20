@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TrackSummary } from "@/features/journey/domain/session";
+import { buildProgressiveTimeline } from "@/features/journey/domain/progressive-generation";
 import {
   buildTimeline,
   railProgress,
@@ -161,5 +162,57 @@ describe("railProgress", () => {
   it("treats a single-session track as all-or-nothing", () => {
     expect(railProgress(buildTimeline(withDone(track(1), [])))).toBe(0);
     expect(railProgress(buildTimeline(withDone(track(1), ["l1"])))).toBe(1);
+  });
+});
+
+
+describe("buildProgressiveTimeline", () => {
+  it("opens only session one while later generated lessons stay locked", () => {
+    const track = buildProgressiveTimeline({
+      generationId: "gen-1",
+      spaceId: "space-1",
+      status: "running",
+      stage: "generating_lessons",
+      progress: { completed: 3, total: 4 },
+      lessons: [
+        {
+          conceptId: "c1",
+          orderIndex: 1,
+          status: "completed",
+          title: "Sesi Pertama",
+          contentMarkdown: "# Ready 1",
+        },
+        {
+          conceptId: "c2",
+          orderIndex: 2,
+          status: "running",
+        },
+        {
+          conceptId: "c3",
+          orderIndex: 3,
+          status: "completed",
+          title: "Sesi Ketiga",
+          contentMarkdown: "# Ready 3",
+        },
+        {
+          conceptId: "c4",
+          orderIndex: 4,
+          status: "completed",
+          title: "Sesi Keempat",
+          contentMarkdown: "# Ready 4",
+        },
+      ],
+    });
+
+    expect(track.sessions.map((session) => session.status)).toEqual([
+      "current",
+      "locked",
+      "locked",
+      "locked",
+    ]);
+    expect(track.sessions[0]?.previewMarkdown).toBe("# Ready 1");
+    expect(track.sessions[2]?.previewMarkdown).toBeUndefined();
+    expect(track.generationProgress).toEqual({ completed: 3, total: 4 });
+    expect(track.completedCount).toBe(0);
   });
 });
