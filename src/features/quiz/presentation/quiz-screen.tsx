@@ -166,7 +166,7 @@ export function QuizScreen({
     <AppPanel surface="bg-[#f8fafc]">
       <main
         id="main"
-        className={`flex flex-1 flex-col overflow-y-auto ${reviewing ? "pb-80" : "pb-40"}`}
+        className={`flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain ${reviewing ? "pb-80" : "pb-40"}`}
       >
         <header className="relative flex min-h-[293px] shrink-0 flex-col overflow-hidden rounded-b-[40px] bg-primary-500 pb-10">
           {/* The soft glow from the design, purely decorative. */}

@@ -55,7 +55,7 @@ export function SlidesScreen({
     <AppPanel surface="bg-[#f8fafc]">
       <main
         id="main"
-        className="relative flex flex-1 flex-col overflow-y-auto pb-36"
+        className="relative flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain pb-36"
       >
         <span
           aria-hidden="true"
@@ -155,12 +155,9 @@ export function SlidesScreen({
                   <h3 className="line-clamp-2 text-sm leading-[1.25] font-bold break-words text-[#071843]">
                     {slide.title}
                   </h3>
-                  <ul className="flex min-h-0 flex-1 list-disc flex-col gap-1 overflow-hidden pl-4 text-[10px] leading-[1.45] text-[#475569]">
+                  <ul className="flex min-h-0 flex-1 list-disc flex-col gap-1 overflow-y-auto overscroll-y-contain pl-4 text-[10px] leading-[1.45] text-[#475569]">
                     {slide.bullets.map((bullet) => (
-                      <li
-                        key={`${slide.id}-${bullet}`}
-                        className="line-clamp-2 break-words"
-                      >
+                      <li key={`${slide.id}-${bullet}`} className="break-words">
                         {bullet}
                       </li>
                     ))}
