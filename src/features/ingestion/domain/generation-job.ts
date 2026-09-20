@@ -49,3 +49,14 @@ export const GENERATION_STAGE_CAPTIONS: Record<GenerationStage, string> = {
   generating_lessons: "Membuat materi belajar…",
   finalizing: "Menyimpan hasil…",
 };
+
+/** Show counts only after fan-out fixes the total; 0/1 during extraction is not a lesson estimate. */
+export function lessonProgressLabel(job: GenerationJob | null): string | null {
+  if (
+    !job ||
+    (job.stage !== "generating_lessons" && job.stage !== "finalizing")
+  )
+    return null;
+  if (job.progress.total < 1) return null;
+  return `${job.progress.completed}/${job.progress.total} materi selesai`;
+}

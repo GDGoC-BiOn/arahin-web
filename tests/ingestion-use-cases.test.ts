@@ -256,4 +256,20 @@ describe("ingestDocument", () => {
     await expect(useCases.resumeGeneration(observer)).resolves.toBeNull();
     expect(gateway.getBlueprintGeneration).not.toHaveBeenCalled();
   });
+
+  it("announces the saved filename when resuming a job", async () => {
+    const checkpoint: GenerationCheckpointStore = {
+      save: vi.fn(),
+      load: vi.fn().mockReturnValue({
+        spaceId: "space-1",
+        generationId: "gen-1",
+        fileName: "notes.pdf",
+      }),
+      clear: vi.fn(),
+    };
+    const { useCases, observer } = harness({}, { checkpoint });
+    const onResume = vi.fn();
+    await useCases.resumeGeneration({ ...observer, onResume });
+    expect(onResume).toHaveBeenCalledWith("notes.pdf");
+  });
 });

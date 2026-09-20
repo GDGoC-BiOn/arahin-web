@@ -16,11 +16,15 @@ export function ProcessingScreen({
   caption,
   steps,
   fileName,
+  lessonProgress,
+  onLeave,
 }: {
-  percent: number;
+  percent: number | null;
   caption: string;
   steps: IngestionStep[];
   fileName: string | null;
+  lessonProgress: string | null;
+  onLeave?: () => void;
 }) {
   return (
     <motion.div
@@ -54,30 +58,47 @@ export function ProcessingScreen({
         ) : null}
       </div>
 
-      <div className="flex w-full flex-col gap-1.5">
-        <div
-          className="h-2 w-full overflow-hidden rounded-full bg-[#f0f0f0]"
-          role="progressbar"
-          aria-valuenow={percent}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-label="Progres pemrosesan"
-        >
-          <motion.div
-            className="h-full origin-left rounded-full bg-primary-500"
-            initial={false}
-            animate={{ scaleX: percent / 100 }}
-            transition={PROGRESS_SPRING}
-          />
+      {percent === null ? (
+        <p role="status" className="text-sm font-semibold text-primary-500">
+          {lessonProgress ?? "Menunggu materi pertama selesai…"}
+        </p>
+      ) : (
+        <div className="flex w-full flex-col gap-1.5">
+          <div
+            className="h-2 w-full overflow-hidden rounded-full bg-[#f0f0f0]"
+            role="progressbar"
+            aria-valuenow={percent}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label="Progres pemrosesan"
+          >
+            <motion.div
+              className="h-full origin-left rounded-full bg-primary-500"
+              initial={false}
+              animate={{ scaleX: percent / 100 }}
+              transition={PROGRESS_SPRING}
+            />
+          </div>
+          <p className="self-end pt-2 text-xs text-subtle">{percent}%</p>
         </div>
-        <p className="self-end pt-2 text-xs text-subtle">{percent}%</p>
-      </div>
+      )}
+      {onLeave ? (
+        <button
+          type="button"
+          onClick={onLeave}
+          className="rounded-xl px-4 py-2 text-sm font-semibold text-primary-500"
+        >
+          Kembali ke Beranda · lanjut di background
+        </button>
+      ) : null}
 
-      <ol className="flex w-full flex-col gap-4">
-        {steps.map((step) => (
-          <StepRow key={step.id} step={step} />
-        ))}
-      </ol>
+      {percent !== null ? (
+        <ol className="flex w-full flex-col gap-4">
+          {steps.map((step) => (
+            <StepRow key={step.id} step={step} />
+          ))}
+        </ol>
+      ) : null}
     </motion.div>
   );
 }

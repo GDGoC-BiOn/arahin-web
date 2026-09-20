@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  type GenerationJob,
+  lessonProgressLabel,
+} from "@/features/ingestion/domain/generation-job";
+import {
   captionForGenerationStage,
   INGESTION_STEP_COUNT,
   INITIAL_INGESTION_STATE,
@@ -202,5 +206,39 @@ describe("ingestionSteps", () => {
     ]) {
       expect(statuses(s).filter((x) => x === "active")).toHaveLength(1);
     }
+  });
+});
+
+describe("lessonProgressLabel", () => {
+  const job: GenerationJob = {
+    generationId: "gen-1",
+    spaceId: "space-1",
+    status: "running",
+    stage: "extracting_blueprint",
+    progress: { completed: 0, total: 1 },
+  };
+
+  it("does not present the extraction unit as a lesson count", () => {
+    expect(lessonProgressLabel(job)).toBeNull();
+  });
+
+  it("reports only durable lesson units after fan-out", () => {
+    expect(
+      lessonProgressLabel({
+        ...job,
+        stage: "generating_lessons",
+        progress: { completed: 4, total: 12 },
+      }),
+    ).toBe("4/12 materi selesai");
+  });
+
+  it("keeps the count during finalization", () => {
+    expect(
+      lessonProgressLabel({
+        ...job,
+        stage: "finalizing",
+        progress: { completed: 12, total: 12 },
+      }),
+    ).toBe("12/12 materi selesai");
   });
 });
