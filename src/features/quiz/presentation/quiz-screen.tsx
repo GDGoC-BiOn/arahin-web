@@ -1,7 +1,8 @@
 "use client";
 
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "motion/react";
-import { useCallback, useEffect, useReducer, useState } from "react";
+import { useReducer, useState } from "react";
 import { ArrowLeftSmallIcon } from "@/shared/presentation/icons";
 import { AppPanel } from "@/shared/presentation/layout/app-panel";
 import type { QuizUseCases } from "../application/quiz-use-cases";
@@ -95,72 +96,92 @@ export function QuizScreen({
   onFinish: () => void;
   onSignIn: () => void;
 }) {
-  const [quiz, setQuiz] = useState<QuizDetail | null>(initialQuiz);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const [session, dispatch] = useReducer(reducer, INITIAL_QUIZ_SESSION);
   const [result, setResult] = useState<AttemptResult | null>(null);
-  const [submitting, setSubmitting] = useState(false);
   const [reviewing, setReviewing] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const [expired, setExpired] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (source.kind !== "quiz") return;
-    let cancelled = false;
-    useCases
-      .loadQuiz(source.quizId)
-      .then((loaded) => {
-        if (!cancelled) setQuiz(loaded);
-      })
-      .catch(() => {
-        if (!cancelled) setError("Gagal memuat kuis. Coba lagi.");
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [source, useCases]);
+  const quizQuery = useQuery({
+    queryKey: [
+      "quiz",
+      source.kind,
+      source.kind === "quiz" ? source.quizId : source.activityId,
+    ],
+    queryFn: () => {
+      if (source.kind === "quiz") return useCases.loadQuiz(source.quizId);
+      if (initialQuiz) return Promise.resolve(initialQuiz);
+      throw new Error("Activity quiz is missing initial data.");
+    },
+    initialData: initialQuiz ?? undefined,
+  });
 
+  const quiz = quizQuery.data ?? null;
   const items = quiz?.items ?? [];
   const item = items[session.index] ?? null;
   const complete = isComplete(session, items);
   const feedback = reviewing && item ? feedbackFor(result, item.id) : null;
 
-  const submit = useCallback(async () => {
-    if (!quiz || submitting) return;
-    setSubmitting(true);
-    setError(null);
-    try {
-      // Held true until the modal is on screen, so the gap between tap and
-      // result is never a dead frame.
-      const graded = await useCases.submit({
+  const submitMutation = useMutation({
+    mutationFn: (input: { quiz: QuizDetail; session: QuizSession }) =>
+      useCases.submit({
         source,
-        session,
-        items: quiz.items,
+        session: input.session,
+        items: input.quiz.items,
         spaceId,
         lessonId,
-      });
+      }),
+    onSuccess: (graded) => {
       setResult(graded);
-      // Per-question feedback first, then the score. The backend grades the
-      // whole quiz at once, so the walkthrough starts after submitting.
+      setExpired(false);
+      setSubmitError(null);
+
+      if (spaceId) {
+        void queryClient.invalidateQueries({
+          queryKey: ["journey", "timeline", spaceId],
+        });
+      }
+      void queryClient.invalidateQueries({
+        queryKey: ["ingestion", "recent-uploads"],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["ingestion", "due-reviews"],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["profile", "snapshot"],
+      });
+
       if (hasReview(graded)) {
         dispatch({ type: "review" });
         setReviewing(true);
       } else {
         setShowResult(true);
       }
-    } catch (caught) {
+    },
+    onError: (caught) => {
       if (isSessionExpired(caught)) {
         setExpired(true);
-        setError(
+        setSubmitError(
           "Sesi kamu sudah berakhir. Masuk lagi untuk mengirim jawaban.",
         );
       } else {
-        setError("Gagal mengirim jawaban. Coba lagi.");
+        setSubmitError("Gagal mengirim jawaban. Coba lagi.");
       }
-    } finally {
-      setSubmitting(false);
-    }
-  }, [lessonId, quiz, session, source, spaceId, submitting, useCases]);
+    },
+  });
+
+  const submit = () => {
+    if (!quiz || submitMutation.isPending) return;
+    setSubmitError(null);
+    submitMutation.mutate({ quiz, session });
+  };
+
+  const error = quizQuery.isError
+    ? "Gagal memuat kuis. Coba lagi."
+    : submitError;
+  const submitting = submitMutation.isPending;
 
   return (
     <AppPanel surface="bg-[#f8fafc]">
@@ -294,7 +315,7 @@ export function QuizScreen({
           submitting={submitting}
           onPrevious={() => dispatch({ type: "previous" })}
           onNext={() => dispatch({ type: "next", count: items.length })}
-          onSubmit={() => void submit()}
+          onSubmit={submit}
         />
       )}
 
