@@ -1,4 +1,5 @@
 import type { AxiosInstance } from "axios";
+import { z } from "zod";
 import type { AuthGateway } from "../domain/auth-gateway";
 import type { AuthUser } from "../domain/auth-user";
 import type {
@@ -6,26 +7,37 @@ import type {
   RegisterCredentials,
 } from "../domain/credentials";
 
+const authUserSchema = z.object({
+  id: z.string(),
+  email: z.string(),
+  fullName: z.string(),
+});
+
+const authUserEnvelopeSchema = z.object({
+  user: authUserSchema,
+});
+
+const nullableAuthUserEnvelopeSchema = z.object({
+  user: authUserSchema.nullable(),
+});
+
 /**
  * Talks to this app's own `/api/auth/*` proxy, never to the Go backend
  * directly. The token stays in an httpOnly cookie the browser sends
  * automatically, so nothing here handles it.
+ *
+ * Axios generics only describe what we hope arrived. Zod checks the bytes at
+ * the boundary before the rest of the feature can trust them.
  */
 export function createBrowserAuthGateway(client: AxiosInstance): AuthGateway {
   return {
     async login(credentials: LoginCredentials): Promise<AuthUser> {
-      const { data } = await client.post<{ user: AuthUser }>(
-        "/auth/login",
-        credentials,
-      );
-      return data.user;
+      const { data } = await client.post("/auth/login", credentials);
+      return authUserEnvelopeSchema.parse(data).user;
     },
     async register(credentials: RegisterCredentials): Promise<AuthUser> {
-      const { data } = await client.post<{ user: AuthUser }>(
-        "/auth/register",
-        credentials,
-      );
-      return data.user;
+      const { data } = await client.post("/auth/register", credentials);
+      return authUserEnvelopeSchema.parse(data).user;
     },
     async logout(): Promise<void> {
       await client.post("/auth/logout");
@@ -37,8 +49,8 @@ export function createBrowserAuthGateway(client: AxiosInstance): AuthGateway {
       await client.post("/auth/reset-password", { token, newPassword });
     },
     async currentUser(): Promise<AuthUser | null> {
-      const { data } = await client.get<{ user: AuthUser | null }>("/auth/me");
-      return data.user;
+      const { data } = await client.get("/auth/me");
+      return nullableAuthUserEnvelopeSchema.parse(data).user;
     },
   };
 }
