@@ -128,10 +128,7 @@ export function HomeScreen({
               }}
             />
             {searched ? null : (
-              <DueReviews
-                reviews={reviewsQuery.data ?? []}
-                onOpen={onReview}
-              />
+              <DueReviews reviews={reviewsQuery.data ?? []} onOpen={onReview} />
             )}
             <RecentUploads
               uploads={uploadsQuery.data ?? []}
