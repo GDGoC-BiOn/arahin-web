@@ -65,8 +65,7 @@ export function JourneyScreen({
 
   let error: string | null = null;
   if (generationStatus === "failed" || generationStatus === "cancelled") {
-    error =
-      generationQuery.data?.job.errorMessage ?? "Pembuatan materi gagal.";
+    error = generationQuery.data?.job.errorMessage ?? "Pembuatan materi gagal.";
   } else if (generationQuery.isError) {
     error = "Gagal memuat progres materi. Coba lagi.";
   } else if (timelineQuery.isError) {
