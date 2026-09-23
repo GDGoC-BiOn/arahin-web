@@ -1,18 +1,15 @@
 "use client";
 
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "motion/react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AppPanel } from "@/shared/presentation/layout/app-panel";
 import {
   type AppTab,
   BottomTabBar,
 } from "@/shared/presentation/navigation/bottom-tab-bar";
 import type { IngestionUseCases } from "../application/ingestion-use-cases";
-import type {
-  DueReview,
-  SpaceProgress,
-  SpaceSummary,
-} from "../domain/learning-space";
+import type { DueReview } from "../domain/learning-space";
 import { DetectionFailedSheet } from "./detection-failed-sheet";
 import { DueReviews } from "./due-reviews";
 import {
@@ -23,11 +20,7 @@ import {
 } from "./home-sections";
 import { FADE } from "./motion-tokens";
 import { ProcessingScreen } from "./processing-screen";
-import {
-  type RecentUpload,
-  RecentUploads,
-  toRecentUploads,
-} from "./recent-uploads";
+import { RecentUploads, toRecentUploads } from "./recent-uploads";
 import { UploadDropzone } from "./upload-dropzone";
 import { useIngestionFlow } from "./use-ingestion-flow";
 
@@ -46,56 +39,42 @@ export function HomeScreen({
   onSignIn: () => void;
   onReview: (review: DueReview) => void;
 }) {
-  const [reviews, setReviews] = useState<DueReview[]>([]);
+  const queryClient = useQueryClient();
   const mounted = useRef(true);
+  const [query, setQuery] = useState("");
+  const [searched, setSearched] = useState("");
+
   useEffect(() => {
     mounted.current = true;
     return () => {
       mounted.current = false;
     };
   }, []);
-  useEffect(() => {
-    let cancelled = false;
-    useCases
-      .listDueReviews()
-      .then((due) => {
-        if (!cancelled) setReviews(due);
-      })
-      // Reviews are a nudge, never a blocker.
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [useCases]);
-  const [uploads, setUploads] = useState<RecentUpload[] | null>(null);
-  const [query, setQuery] = useState("");
-  const [searched, setSearched] = useState("");
 
-  // Debounced so typing a word is one request, not one per keystroke.
   useEffect(() => {
     const id = setTimeout(() => setSearched(query.trim()), 250);
     return () => clearTimeout(id);
   }, [query]);
 
-  const loadUploads = useCallback(async () => {
-    try {
+  const reviewsQuery = useQuery({
+    queryKey: ["ingestion", "due-reviews"],
+    queryFn: () => useCases.listDueReviews(),
+    // Reviews are a nudge, never a blocker.
+    retry: false,
+  });
+
+  const uploadsQuery = useQuery({
+    queryKey: ["ingestion", "recent-uploads", searched],
+    queryFn: async () => {
       const [spaces, progress] = await Promise.all([
         useCases.listSpaces(searched),
         useCases.listProgress(),
       ]);
-      setUploads(
-        toRecentUploads(spaces as SpaceSummary[], progress as SpaceProgress[]),
-      );
-    } catch {
-      // The list is supporting detail; failing to load it must not block the
-      // one thing this screen exists for, which is uploading a document.
-      setUploads([]);
-    }
-  }, [searched, useCases]);
-
-  useEffect(() => {
-    void loadUploads();
-  }, [loadUploads]);
+      return toRecentUploads(spaces, progress);
+    },
+    // The upload box remains usable even when supporting history fails.
+    retry: false,
+  });
 
   const flow = useIngestionFlow({
     useCases,
@@ -105,15 +84,15 @@ export function HomeScreen({
     },
     onComplete: (result) => {
       if (!mounted.current) return;
-      void loadUploads();
+      void queryClient.invalidateQueries({
+        queryKey: ["ingestion", "recent-uploads"],
+      });
       onOpenSpace(result.spaceId);
     },
   });
 
   return (
     <AppPanel>
-      {/* Keep the familiar full-screen loading shell while the durable job
-          runs; completed lesson previews become interactive inside it. */}
       <AnimatePresence initial={false} mode="popLayout">
         {flow.busy ? (
           <motion.div
@@ -149,10 +128,13 @@ export function HomeScreen({
               }}
             />
             {searched ? null : (
-              <DueReviews reviews={reviews} onOpen={onReview} />
+              <DueReviews
+                reviews={reviewsQuery.data ?? []}
+                onOpen={onReview}
+              />
             )}
             <RecentUploads
-              uploads={uploads ?? []}
+              uploads={uploadsQuery.data ?? []}
               query={searched}
               onOpen={onOpenSpace}
               onSeeAll={() => onSelectTab("journey")}
