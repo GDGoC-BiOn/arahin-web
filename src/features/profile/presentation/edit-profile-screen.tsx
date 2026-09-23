@@ -1,8 +1,13 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { TextField } from "@/shared/presentation/form/text-field";
@@ -12,7 +17,6 @@ import type { ProfileUseCases } from "../application/profile-use-cases";
 import { initialOf } from "../domain/profile-stats";
 import { FADE, PRESS } from "./motion-tokens";
 
-/** Same caps as the backend (identity/routes.go). */
 const TEXT_MAX = 120;
 
 const schema = z.object({
@@ -39,10 +43,7 @@ export function EditProfileScreen({
   onBack: () => void;
   onSaved: () => void;
 }) {
-  const [email, setEmail] = useState<string | null>(null);
-  const [loadFailed, setLoadFailed] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const queryClient = useQueryClient();
 
   const {
     register,
@@ -55,42 +56,37 @@ export function EditProfileScreen({
     defaultValues: { fullName: "", role: "", institution: "" },
   });
 
-  useEffect(() => {
-    let cancelled = false;
-    useCases
-      .loadUser()
-      .then((user) => {
-        if (cancelled) return;
-        setEmail(user.email);
-        reset({
-          fullName: user.fullName,
-          role: user.role,
-          institution: user.institution,
-        });
-      })
-      .catch(() => {
-        if (!cancelled) setLoadFailed(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [reset, useCases]);
-
-  const save = handleSubmit(async (values) => {
-    setSaving(true);
-    setSaveError(null);
-    try {
-      await useCases.updateUser(values);
-      // Held until the profile screen takes over, so the button never flicks
-      // back to "Simpan" in between.
-      onSaved();
-    } catch {
-      setSaveError("Profil gagal disimpan. Coba lagi.");
-      setSaving(false);
-    }
+  const userQuery = useQuery({
+    queryKey: ["profile", "user"],
+    queryFn: () => useCases.loadUser(),
   });
 
-  const loading = email === null && !loadFailed;
+  useEffect(() => {
+    if (!userQuery.data) return;
+    reset({
+      fullName: userQuery.data.fullName,
+      role: userQuery.data.role,
+      institution: userQuery.data.institution,
+    });
+  }, [reset, userQuery.data]);
+
+  const saveMutation = useMutation({
+    mutationFn: (values: Values) => useCases.updateUser(values),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["profile", "user"] }),
+        queryClient.invalidateQueries({ queryKey: ["profile", "snapshot"] }),
+      ]);
+      onSaved();
+    },
+  });
+
+  const save = handleSubmit((values) => {
+    saveMutation.mutate(values);
+  });
+
+  const loading = userQuery.isPending;
+  const saving = saveMutation.isPending;
 
   return (
     <AppPanel>
@@ -119,10 +115,10 @@ export function EditProfileScreen({
           <span className="flex size-20 items-center justify-center rounded-full bg-primary-500 text-[30px] font-bold text-white">
             {initialOf(watch("fullName") || "?")}
           </span>
-          <p className="pt-2 text-xs text-muted">{email ?? " "}</p>
+          <p className="pt-2 text-xs text-muted">{userQuery.data?.email ?? " "}</p>
         </div>
 
-        {loadFailed ? (
+        {userQuery.isError ? (
           <p role="alert" className="text-xs font-semibold text-[#e8395b]">
             Profil gagal dimuat. Coba muat ulang halaman.
           </p>
@@ -161,9 +157,9 @@ export function EditProfileScreen({
               />
             </fieldset>
 
-            {saveError ? (
+            {saveMutation.isError ? (
               <p role="alert" className="text-xs font-semibold text-[#e8395b]">
-                {saveError}
+                Profil gagal disimpan. Coba lagi.
               </p>
             ) : null}
 
