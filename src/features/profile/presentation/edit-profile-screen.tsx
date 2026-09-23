@@ -1,11 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -115,7 +111,9 @@ export function EditProfileScreen({
           <span className="flex size-20 items-center justify-center rounded-full bg-primary-500 text-[30px] font-bold text-white">
             {initialOf(watch("fullName") || "?")}
           </span>
-          <p className="pt-2 text-xs text-muted">{userQuery.data?.email ?? " "}</p>
+          <p className="pt-2 text-xs text-muted">
+            {userQuery.data?.email ?? " "}
+          </p>
         </div>
 
         {userQuery.isError ? (
