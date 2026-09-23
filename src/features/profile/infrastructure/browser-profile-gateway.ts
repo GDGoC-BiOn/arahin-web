@@ -1,103 +1,160 @@
 import type { AxiosInstance } from "axios";
+import { z } from "zod";
 import type { ProfileGateway } from "../domain/profile-gateway";
 import type {
   NotificationList,
-  ProfileProgressSpace,
   ProfileSnapshot,
-  ProfileSpace,
   ProfileUpdate,
   ProfileUser,
-  StreakHistoryDay,
 } from "../domain/profile-summary";
 
+const rawProfileUserSchema = z.object({
+  id: z.string().default(""),
+  email: z.string().default(""),
+  fullName: z.string().default(""),
+  role: z.string().nullable().optional(),
+  institution: z.string().nullable().optional(),
+});
+
+const notificationSchema = z.object({
+  id: z.string(),
+  kind: z.string().default(""),
+  title: z.string(),
+  body: z.string().default(""),
+  readAt: z.string().nullable().default(null),
+  createdAt: z.string(),
+});
+
+const notificationListSchema = z.object({
+  notifications: z.array(notificationSchema).default([]),
+  unreadCount: z.number().default(0),
+});
+
+const spacesEnvelopeSchema = z.object({
+  learningSpaces: z
+    .array(
+      z.object({
+        id: z.string(),
+        sourceCount: z.number().default(0),
+      }),
+    )
+    .default([]),
+});
+
+const progressEnvelopeSchema = z.object({
+  user: z
+    .object({
+      dailyStreak: z.number().optional(),
+      xpEarned: z.number().optional(),
+      quizzesTaken: z.number().optional(),
+    })
+    .nullable()
+    .optional(),
+  spaces: z
+    .array(
+      z.object({
+        id: z.string(),
+        totalLessons: z.number().default(0),
+        completedLessons: z.number().default(0),
+      }),
+    )
+    .default([]),
+});
+
+const streakEnvelopeSchema = z.object({
+  streak: z
+    .array(
+      z.object({
+        date: z.string(),
+        active: z.boolean(),
+      }),
+    )
+    .optional(),
+});
+
+const subscriptionSchema = z.object({
+  premium: z.boolean().optional(),
+});
+
+const unreadSchema = z.object({
+  unreadCount: z.number().optional(),
+});
+
 /** role and institution are NULL until set; normalise to strings. */
-function toUser(raw: Partial<ProfileUser>): ProfileUser {
+function toUser(raw: z.infer<typeof rawProfileUserSchema>): ProfileUser {
   return {
-    id: raw.id ?? "",
-    email: raw.email ?? "",
-    fullName: raw.fullName ?? "",
+    id: raw.id,
+    email: raw.email,
+    fullName: raw.fullName,
     role: raw.role ?? "",
     institution: raw.institution ?? "",
   };
 }
 
 /**
- * Profile needs data owned by two other features (`/v1/me` from auth,
- * `/v1/spaces` and `/v1/me/progress` from ingestion). The layer rules forbid
- * reaching into another feature's infrastructure, so this calls the same
- * already-deployed proxy routes directly — no new route handlers, and the
- * session still rides in the httpOnly cookie.
- *
- * The three requests are independent, so they go out together rather than in
- * series: the screen is gated on the slowest one, not their sum.
+ * Profile fans out to several API resources. Each response is validated at the
+ * boundary before the application layer derives stats and streak UI from it.
  */
 export function createBrowserProfileGateway(
   client: AxiosInstance,
 ): ProfileGateway {
   return {
     async loadUser(): Promise<ProfileUser> {
-      const { data } = await client.get<Partial<ProfileUser>>("/me");
-      return toUser(data);
+      const { data } = await client.get("/me");
+      return toUser(rawProfileUserSchema.parse(data));
     },
     async updateUser(update: ProfileUpdate): Promise<ProfileUser> {
-      const { data } = await client.patch<Partial<ProfileUser>>("/me", update);
-      return toUser(data);
+      const { data } = await client.patch("/me", update);
+      return toUser(rawProfileUserSchema.parse(data));
     },
     async loadNotifications(): Promise<NotificationList> {
-      const { data } =
-        await client.get<Partial<NotificationList>>("/me/notifications");
-      return {
-        notifications: data.notifications ?? [],
-        unreadCount: data.unreadCount ?? 0,
-      };
+      const { data } = await client.get("/me/notifications");
+      return notificationListSchema.parse(data);
     },
     async markNotificationRead(id: string): Promise<void> {
       await client.patch(`/me/notifications/${encodeURIComponent(id)}/read`);
     },
     async loadSnapshot(): Promise<ProfileSnapshot> {
-      // Streak history and plan are garnish: if either fails, the screen
-      // falls back rather than failing whole.
       const [me, spaces, progress, streak, subscription, notifications] =
         await Promise.all([
-          client.get<Partial<ProfileUser>>("/me"),
-          client.get<{ learningSpaces: ProfileSpace[] }>("/spaces"),
-          client.get<{
-            user: {
-              dailyStreak?: number;
-              xpEarned?: number;
-              quizzesTaken?: number;
-            } | null;
-            spaces: ProfileProgressSpace[];
-          }>("/me/progress"),
+          client.get("/me"),
+          client.get("/spaces"),
+          client.get("/me/progress"),
           client
-            .get<{ streak?: StreakHistoryDay[] }>("/me/streak", {
-              params: { days: 7 },
-            })
-            .then((r) => r.data.streak ?? null)
+            .get("/me/streak", { params: { days: 7 } })
+            .then((response) =>
+              streakEnvelopeSchema.parse(response.data).streak ?? null,
+            )
             .catch(() => null),
           client
-            .get<{ premium?: boolean }>("/me/subscription")
-            .then((r) => Boolean(r.data.premium))
+            .get("/me/subscription")
+            .then((response) =>
+              Boolean(subscriptionSchema.parse(response.data).premium),
+            )
             .catch(() => null),
           client
-            .get<{ unreadCount?: number }>("/me/notifications")
-            .then((r) => r.data.unreadCount ?? 0)
+            .get("/me/notifications")
+            .then(
+              (response) =>
+                unreadSchema.parse(response.data).unreadCount ?? 0,
+            )
             .catch(() => null),
         ]);
 
-      const user = toUser(me.data);
+      const user = toUser(rawProfileUserSchema.parse(me.data));
+      const parsedSpaces = spacesEnvelopeSchema.parse(spaces.data);
+      const parsedProgress = progressEnvelopeSchema.parse(progress.data);
 
       return {
         user,
-        // dailyStreak lives on the progress envelope's user, not on /v1/me.
-        dailyStreak: progress.data.user?.dailyStreak ?? 0,
-        xpEarned: progress.data.user?.xpEarned ?? 0,
-        quizzesTaken: progress.data.user?.quizzesTaken ?? 0,
+        dailyStreak: parsedProgress.user?.dailyStreak ?? 0,
+        xpEarned: parsedProgress.user?.xpEarned ?? 0,
+        quizzesTaken: parsedProgress.user?.quizzesTaken ?? 0,
         streakHistory: streak,
         premium: subscription,
         unreadNotifications: notifications,
-        spaces: spaces.data.learningSpaces ?? [],
-        progress: progress.data.spaces ?? [],
+        spaces: parsedSpaces.learningSpaces,
+        progress: parsedProgress.spaces,
       };
     },
   };
