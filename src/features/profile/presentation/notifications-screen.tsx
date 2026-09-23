@@ -1,7 +1,7 @@
 "use client";
 
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "motion/react";
-import { useCallback, useEffect, useState } from "react";
 import {
   ArrowLeftIcon,
   BellIcon,
@@ -12,6 +12,8 @@ import { markReadLocally, notificationAge } from "../domain/notifications";
 import type { NotificationList } from "../domain/profile-summary";
 import { FADE, PRESS } from "./motion-tokens";
 
+const NOTIFICATIONS_KEY = ["profile", "notifications"] as const;
+
 export function NotificationsScreen({
   useCases,
   onBack,
@@ -19,37 +21,43 @@ export function NotificationsScreen({
   useCases: ProfileUseCases;
   onBack: () => void;
 }) {
-  const [list, setList] = useState<NotificationList | null>(null);
-  const [failed, setFailed] = useState(false);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    let cancelled = false;
-    useCases
-      .loadNotifications()
-      .then((loaded) => {
-        if (!cancelled) setList(loaded);
-      })
-      .catch(() => {
-        if (!cancelled) setFailed(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [useCases]);
+  const notificationsQuery = useQuery({
+    queryKey: NOTIFICATIONS_KEY,
+    queryFn: () => useCases.loadNotifications(),
+  });
 
-  // Optimistic: the dot clears on tap. A failed request only means the
-  // notification shows as unread again next visit, so it isn't rolled back.
-  const markRead = useCallback(
-    (id: string) => {
-      setList((current) =>
-        current
-          ? markReadLocally(current, id, new Date().toISOString())
-          : current,
+  const markReadMutation = useMutation({
+    mutationFn: (id: string) => useCases.markNotificationRead(id),
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: NOTIFICATIONS_KEY });
+      const previous =
+        queryClient.getQueryData<NotificationList>(NOTIFICATIONS_KEY);
+
+      queryClient.setQueryData<NotificationList>(
+        NOTIFICATIONS_KEY,
+        (current) =>
+          current
+            ? markReadLocally(current, id, new Date().toISOString())
+            : current,
       );
-      void useCases.markNotificationRead(id).catch(() => {});
+
+      return { previous };
     },
-    [useCases],
-  );
+    onError: (_error, _id, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(NOTIFICATIONS_KEY, context.previous);
+      }
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["profile", "snapshot"],
+      });
+    },
+  });
+
+  const list = notificationsQuery.data ?? null;
 
   return (
     <AppPanel>
@@ -74,14 +82,14 @@ export function NotificationsScreen({
         id="main"
         className="flex flex-1 flex-col overflow-y-auto px-6 pb-6"
       >
-        {failed ? (
+        {notificationsQuery.isError ? (
           <p role="alert" className="pt-4 text-xs font-semibold text-[#e8395b]">
             Notifikasi gagal dimuat. Coba muat ulang halaman.
           </p>
         ) : null}
 
         <AnimatePresence initial={false} mode="popLayout">
-          {list === null && !failed ? (
+          {notificationsQuery.isPending ? (
             <motion.ul
               key="loading"
               exit={{ opacity: 0 }}
@@ -128,7 +136,9 @@ export function NotificationsScreen({
                   >
                     <motion.button
                       type="button"
-                      onClick={() => markRead(item.id)}
+                      onClick={() => {
+                        if (unread) markReadMutation.mutate(item.id);
+                      }}
                       whileTap={{ scale: 0.99 }}
                       transition={PRESS}
                       aria-label={`${item.title}${unread ? ", belum dibaca" : ""}`}
