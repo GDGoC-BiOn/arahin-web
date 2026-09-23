@@ -1,8 +1,11 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "motion/react";
 import { useReducer, useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 import { ArrowLeftSmallIcon } from "@/shared/presentation/icons";
 import { AppPanel } from "@/shared/presentation/layout/app-panel";
 import type { QuizUseCases } from "../application/quiz-use-cases";
@@ -28,7 +31,6 @@ import {
   isSessionExpired,
   type QuizDirection,
   type QuizSession,
-  selectOption,
 } from "../domain/quiz-session";
 import {
   FADE,
@@ -40,8 +42,13 @@ import {
 import { QuizOption } from "./quiz-option";
 import { QuizResultModal } from "./quiz-result-modal";
 
+const quizAnswerFormSchema = z.object({
+  answers: z.record(z.string(), z.string()),
+});
+
+type QuizAnswerFormValues = z.infer<typeof quizAnswerFormSchema>;
+
 type Action =
-  | { type: "select"; itemId: string; optionId: string }
   | { type: "next"; count: number }
   | { type: "previous" }
   | { type: "review" }
@@ -49,8 +56,6 @@ type Action =
 
 function reducer(state: QuizSession, action: Action): QuizSession {
   switch (action.type) {
-    case "select":
-      return selectOption(state, action.itemId, action.optionId);
     case "next":
       return goNext(state, action.count);
     case "previous":
@@ -97,6 +102,11 @@ export function QuizScreen({
   onSignIn: () => void;
 }) {
   const queryClient = useQueryClient();
+  const answerForm = useForm<QuizAnswerFormValues>({
+    resolver: zodResolver(quizAnswerFormSchema),
+    defaultValues: { answers: {} },
+  });
+  const answers = answerForm.watch("answers");
   const [session, dispatch] = useReducer(reducer, INITIAL_QUIZ_SESSION);
   const [result, setResult] = useState<AttemptResult | null>(null);
   const [reviewing, setReviewing] = useState(false);
@@ -121,7 +131,8 @@ export function QuizScreen({
   const quiz = quizQuery.data ?? null;
   const items = quiz?.items ?? [];
   const item = items[session.index] ?? null;
-  const complete = isComplete(session, items);
+  const sessionWithAnswers: QuizSession = { ...session, answers };
+  const complete = isComplete(sessionWithAnswers, items);
   const feedback = reviewing && item ? feedbackFor(result, item.id) : null;
 
   const submitMutation = useMutation({
@@ -172,11 +183,11 @@ export function QuizScreen({
     },
   });
 
-  const submit = () => {
+  const submit = answerForm.handleSubmit(() => {
     if (!quiz || submitMutation.isPending) return;
     setSubmitError(null);
-    submitMutation.mutate({ quiz, session });
-  };
+    submitMutation.mutate({ quiz, session: sessionWithAnswers });
+  });
 
   const error = quizQuery.isError
     ? "Gagal memuat kuis. Coba lagi."
@@ -272,12 +283,16 @@ export function QuizScreen({
                   key={option.id}
                   option={option}
                   index={index}
-                  selected={answerFor(session, item.id) === option.id}
+                  selected={answerFor(sessionWithAnswers, item.id) === option.id}
                   verdict={
                     reviewing ? optionVerdict(feedback, option.id) : null
                   }
                   onSelect={(optionId) =>
-                    dispatch({ type: "select", itemId: item.id, optionId })
+                    answerForm.setValue(
+                      "answers",
+                      { ...answers, [item.id]: optionId },
+                      { shouldDirty: true, shouldValidate: true },
+                    )
                   }
                 />
               ))}
@@ -310,7 +325,9 @@ export function QuizScreen({
         <SubmitDock
           canGoBack={session.index > 0}
           isLast={items.length > 0 && session.index === items.length - 1}
-          answered={item ? answerFor(session, item.id) !== null : false}
+          answered={
+            item ? answerFor(sessionWithAnswers, item.id) !== null : false
+          }
           complete={complete}
           submitting={submitting}
           onPrevious={() => dispatch({ type: "previous" })}
@@ -341,6 +358,7 @@ export function QuizScreen({
           setShowResult(false);
           setReviewing(false);
           dispatch({ type: "restart" });
+          answerForm.reset({ answers: {} });
         }}
       />
     </AppPanel>
