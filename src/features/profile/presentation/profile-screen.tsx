@@ -1,17 +1,15 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "motion/react";
-import { type ReactNode, useCallback, useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { CrownBadgeIcon } from "@/shared/presentation/icons/profile-icons";
 import { AppPanel } from "@/shared/presentation/layout/app-panel";
 import {
   type AppTab,
   BottomTabBar,
 } from "@/shared/presentation/navigation/bottom-tab-bar";
-import type {
-  ProfileUseCases,
-  ProfileView,
-} from "../application/profile-use-cases";
+import type { ProfileUseCases } from "../application/profile-use-cases";
 import { initialOf } from "../domain/profile-stats";
 import { FADE } from "./motion-tokens";
 import { ProfileHeader } from "./profile-header";
@@ -29,7 +27,6 @@ export function ProfileScreen({
   onOpenNotifications,
 }: {
   useCases: ProfileUseCases;
-  /** From the server-rendered session, so the name is right on first paint. */
   fallbackName: string;
   signOutSlot: ReactNode;
   onBack: () => void;
@@ -37,23 +34,12 @@ export function ProfileScreen({
   onEditProfile: () => void;
   onOpenNotifications: () => void;
 }) {
-  const [view, setView] = useState<ProfileView | null>(null);
-  const [failed, setFailed] = useState(false);
+  const profileQuery = useQuery({
+    queryKey: ["profile", "snapshot"],
+    queryFn: () => useCases.loadProfile(),
+  });
 
-  const load = useCallback(async () => {
-    try {
-      setView(await useCases.loadProfile());
-    } catch {
-      // The name and the sign-out control still work without these numbers,
-      // so a failed fetch degrades the screen rather than replacing it.
-      setFailed(true);
-    }
-  }, [useCases]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
+  const view = profileQuery.data ?? null;
   const name = view?.user.fullName ?? fallbackName;
 
   return (
@@ -87,11 +73,6 @@ export function ProfileScreen({
           ) : null}
         </div>
 
-        {/*
-            Three requests land at once; without a bridge the whole screen
-            would snap into place. Heights are reserved by the skeletons, so
-            the swap costs no layout shift.
-          */}
         <div className="flex flex-col gap-5 px-6">
           <AnimatePresence initial={false} mode="popLayout">
             {view ? (
@@ -121,7 +102,7 @@ export function ProfileScreen({
             )}
           </AnimatePresence>
 
-          {failed ? (
+          {profileQuery.isError ? (
             <p role="alert" className="text-xs font-semibold text-[#e8395b]">
               Statistik gagal dimuat. Coba muat ulang halaman.
             </p>
