@@ -122,8 +122,9 @@ export function createBrowserProfileGateway(
           client.get("/me/progress"),
           client
             .get("/me/streak", { params: { days: 7 } })
-            .then((response) =>
-              streakEnvelopeSchema.parse(response.data).streak ?? null,
+            .then(
+              (response) =>
+                streakEnvelopeSchema.parse(response.data).streak ?? null,
             )
             .catch(() => null),
           client
@@ -135,8 +136,7 @@ export function createBrowserProfileGateway(
           client
             .get("/me/notifications")
             .then(
-              (response) =>
-                unreadSchema.parse(response.data).unreadCount ?? 0,
+              (response) => unreadSchema.parse(response.data).unreadCount ?? 0,
             )
             .catch(() => null),
         ]);
