@@ -1,11 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -89,12 +85,7 @@ export function WorkshopStarter({ api }: { api: WorkshopApi }) {
   });
 
   const quizQuery = useQuery({
-    queryKey: [
-      "workshop",
-      "quiz",
-      selectedSpaceId,
-      activeLesson?.id ?? null,
-    ],
+    queryKey: ["workshop", "quiz", selectedSpaceId, activeLesson?.id ?? null],
     queryFn: () => {
       if (!selectedSpaceId || !activeLesson) {
         throw new Error("Choose a lesson before loading a quiz.");
@@ -356,9 +347,7 @@ export function WorkshopStarter({ api }: { api: WorkshopApi }) {
                     option={option}
                     selected={selectedOption === option.id}
                     disabled={submitMutation.isPending}
-                    onSelect={() =>
-                      selectOption(currentQuestion.id, option.id)
-                    }
+                    onSelect={() => selectOption(currentQuestion.id, option.id)}
                   />
                 ))}
               </div>
