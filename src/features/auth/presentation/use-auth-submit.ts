@@ -1,5 +1,6 @@
 "use client";
 
+import { useMutation } from "@tanstack/react-query";
 import { useCallback, useRef, useState, useTransition } from "react";
 import { authErrorMessage } from "./auth-messages";
 
@@ -16,49 +17,48 @@ function toMessage(error: unknown): string {
 }
 
 /**
- * Keeps the submit -> result -> navigate sequence continuous. `pending` stays
- * true across both the request and the route change, so the button never
- * flicks back to its resting label in the gap between a successful sign-in
- * and the next screen appearing.
+ * Forms own client input state through React Hook Form. The request itself is
+ * server state, so React Query owns its mutation lifecycle.
+ *
+ * Pending remains true through the route hand-off so the submit button never
+ * flicks back to idle between a successful request and the next page.
  */
 export function useAuthSubmit<TValues>(options: {
   action: (values: TValues) => Promise<unknown>;
   onSuccess: () => void;
 }) {
   const { action, onSuccess } = options;
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
   const [handedOff, setHandedOff] = useState(false);
   const [isNavigating, startNavigation] = useTransition();
   const inFlight = useRef(false);
+
+  const mutation = useMutation({
+    mutationFn: action,
+  });
 
   const submit = useCallback(
     async (values: TValues) => {
       if (inFlight.current) return;
       inFlight.current = true;
-      setError(null);
-      setSubmitting(true);
+      mutation.reset();
+
       try {
-        await action(values);
-        // Deliberately no setSubmitting(false) on success: the pending state
-        // must hold until the next screen takes over.
+        await mutation.mutateAsync(values);
         setHandedOff(true);
         startNavigation(() => {
           onSuccess();
         });
-      } catch (cause) {
-        setError(toMessage(cause));
-        setSubmitting(false);
+      } catch {
         inFlight.current = false;
       }
     },
-    [action, onSuccess],
+    [mutation, onSuccess],
   );
 
   return {
     submit,
-    error,
-    clearError: useCallback(() => setError(null), []),
-    pending: submitting || handedOff || isNavigating,
+    error: mutation.error ? toMessage(mutation.error) : null,
+    clearError: mutation.reset,
+    pending: mutation.isPending || handedOff || isNavigating,
   };
 }
