@@ -1,14 +1,15 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "motion/react";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { AppPanel } from "@/shared/presentation/layout/app-panel";
 import {
   type AppTab,
   BottomTabBar,
 } from "@/shared/presentation/navigation/bottom-tab-bar";
 import type { JourneyUseCases } from "../application/journey-use-cases";
-import type { TimelineSession, TimelineTrack } from "../domain/session";
+import type { TimelineSession } from "../domain/session";
 import { FADE } from "./motion-tokens";
 import { SessionNode } from "./session-node";
 import { SessionRail, TrackHeader } from "./track-timeline";
@@ -30,66 +31,51 @@ export function JourneyScreen({
   onOpenSession: (session: TimelineSession) => void;
   onSelectTab: (tab: AppTab) => void;
 }) {
-  const [tracks, setTracks] = useState<TimelineTrack[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<TimelineSession | null>(null);
 
-  const loadFinal = useCallback(async () => {
-    try {
-      const loaded = await useCases.loadTimeline(spaceId);
-      setTracks(loaded);
-      setError(null);
-    } catch (cause) {
-      const status = (cause as { status?: number } | null)?.status;
-      setError(
-        status === 404
-          ? "Materi belum dibuat untuk dokumen ini."
-          : "Gagal memuat sesi. Coba lagi.",
-      );
-    }
-  }, [spaceId, useCases]);
+  const generationQuery = useQuery({
+    queryKey: ["journey", "generation", spaceId, generationId],
+    queryFn: () =>
+      useCases.loadGenerationTimeline(spaceId, generationId as string),
+    enabled: Boolean(generationId),
+    refetchInterval: (query) => {
+      const status = query.state.data?.job.status;
+      return status === "completed" ||
+        status === "failed" ||
+        status === "cancelled"
+        ? false
+        : GENERATION_POLL_MS;
+    },
+  });
 
-  useEffect(() => {
-    if (!generationId) {
-      void loadFinal();
-      return;
-    }
+  const generationStatus = generationQuery.data?.job.status;
+  const shouldLoadFinal = !generationId || generationStatus === "completed";
 
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
+  const timelineQuery = useQuery({
+    queryKey: ["journey", "timeline", spaceId],
+    queryFn: () => useCases.loadTimeline(spaceId),
+    enabled: shouldLoadFinal,
+  });
 
-    const poll = async () => {
-      try {
-        const { job, track } = await useCases.loadGenerationTimeline(
-          spaceId,
-          generationId,
-        );
-        if (cancelled) return;
+  const tracks = shouldLoadFinal
+    ? (timelineQuery.data ?? null)
+    : generationQuery.data
+      ? [generationQuery.data.track]
+      : null;
 
-        if (job.status === "completed") {
-          await loadFinal();
-          return;
-        }
-        if (job.status === "failed" || job.status === "cancelled") {
-          setError(job.errorMessage ?? "Pembuatan materi gagal.");
-          return;
-        }
-
-        setTracks([track]);
-        setError(null);
-        timer = setTimeout(poll, GENERATION_POLL_MS);
-      } catch {
-        if (cancelled) return;
-        setError("Gagal memuat progres materi. Coba lagi.");
-      }
-    };
-
-    void poll();
-    return () => {
-      cancelled = true;
-      if (timer) clearTimeout(timer);
-    };
-  }, [generationId, loadFinal, spaceId, useCases]);
+  let error: string | null = null;
+  if (generationStatus === "failed" || generationStatus === "cancelled") {
+    error =
+      generationQuery.data?.job.errorMessage ?? "Pembuatan materi gagal.";
+  } else if (generationQuery.isError) {
+    error = "Gagal memuat progres materi. Coba lagi.";
+  } else if (timelineQuery.isError) {
+    const status = (timelineQuery.error as { status?: number } | null)?.status;
+    error =
+      status === 404
+        ? "Materi belum dibuat untuk dokumen ini."
+        : "Gagal memuat sesi. Coba lagi.";
+  }
 
   const open = (session: TimelineSession) => {
     if (session.previewMarkdown) {
