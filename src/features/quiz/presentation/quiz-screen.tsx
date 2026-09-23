@@ -283,7 +283,9 @@ export function QuizScreen({
                   key={option.id}
                   option={option}
                   index={index}
-                  selected={answerFor(sessionWithAnswers, item.id) === option.id}
+                  selected={
+                    answerFor(sessionWithAnswers, item.id) === option.id
+                  }
                   verdict={
                     reviewing ? optionVerdict(feedback, option.id) : null
                   }
