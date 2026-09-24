@@ -50,7 +50,6 @@ export default async function SesiPage({
       lessonId={lesson.id}
       title={lesson.title}
       contentMarkdown={lesson.contentMarkdown}
-      hasQuiz={lesson.quizzes.length > 0}
       spaceId={ruang ?? null}
       sourceType={space?.sourceType || null}
     />
