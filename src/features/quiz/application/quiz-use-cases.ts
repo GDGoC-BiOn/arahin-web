@@ -5,7 +5,7 @@ import type {
   QuizSource,
 } from "../domain/quiz";
 import type { QuizGateway } from "../domain/quiz-gateway";
-import { type QuizSession, toAnswers } from "../domain/quiz-session";
+import type { QuizSession } from "../domain/quiz-session";
 
 export function createQuizUseCases(gateway: QuizGateway) {
   return {
@@ -26,11 +26,17 @@ export function createQuizUseCases(gateway: QuizGateway) {
       spaceId: string | null;
       lessonId: string;
     }): Promise<AttemptResult> {
+      // TODO 3 (workshop): transform form/session state into the transport
+      // contract expected by the backend: [{ itemId, optionId }].
+      //
+      // Keep item order from input.items and only include answered items.
+      const answers: QuizAnswer[] = [];
+
       // The backend records lesson completion itself; the timeline reads it
       // back from the tracks endpoint.
       return gateway.submit({
         source: input.source,
-        answers: toAnswers(input.session, input.items),
+        answers,
       });
     },
   };
