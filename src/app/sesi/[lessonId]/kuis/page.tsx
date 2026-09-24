@@ -80,9 +80,11 @@ export default async function KuisPage({
     );
   }
 
+  if (!quiz) return null;
+
   return (
     <QuizFeature
-      source={{ kind: "quiz", quizId: quiz!.id }}
+      source={{ kind: "quiz", quizId: quiz.id }}
       lessonId={lesson.id}
       spaceId={ruang ?? null}
     />
