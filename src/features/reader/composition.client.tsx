@@ -9,14 +9,12 @@ export function ReaderFeature({
   lessonId,
   title,
   contentMarkdown,
-  hasQuiz,
   spaceId,
   sourceType,
 }: {
   lessonId: string;
   title: string;
   contentMarkdown: string;
-  hasQuiz: boolean;
   spaceId: string | null;
   sourceType: string | null;
 }) {
@@ -31,7 +29,6 @@ export function ReaderFeature({
       heading={readerTitle(sourceType)}
       downloadHref={`/api/lessons/${lessonId}/pdf`}
       contentMarkdown={contentMarkdown}
-      hasQuiz={hasQuiz}
       onBack={() => router.push(back)}
       // Reading leads to the slide deck, and the deck to the quiz.
       onContinue={() => router.push(slidesHref)}
