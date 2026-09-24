@@ -82,8 +82,9 @@ src/features/journey/presentation/track-timeline.tsx
 
 Do not edit those UI files.
 
-The starter deliberately simplifies `buildTimeline()` so the first lesson is
-always current and the rest are locked.
+The starter deliberately leaves `buildTimeline()` incomplete: completed
+lessons are respected, but **every unfinished lesson is treated as current**.
+That makes the bug visible even on a fresh `0/N` journey.
 
 Find:
 
