@@ -7,6 +7,7 @@ export type ProgressiveGenerationLesson = {
     | "pending"
     | "running"
     | "completed"
+    | "failed"
     | "retryable_failed"
     | "terminal_failed"
     | "aborted";
@@ -54,9 +55,11 @@ export function buildProgressiveTimeline(
         position: index + 1,
         title:
           lesson.title ??
-          (lesson.status === "running" || lesson.status === "retryable_failed"
-            ? "Sedang dibuat…"
-            : "Menunggu giliran…"),
+          (lesson.status === "failed"
+            ? "Gagal dibuat"
+            : lesson.status === "running" || lesson.status === "retryable_failed"
+              ? "Sedang dibuat…"
+              : "Menunggu giliran…"),
         status: firstReady ? ("current" as const) : ("locked" as const),
         side: (index % 2 === 0 ? "right" : "left") as "left" | "right",
         previewMarkdown: firstReady ? lesson.contentMarkdown : undefined,
