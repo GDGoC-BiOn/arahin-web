@@ -32,6 +32,7 @@ const trackSchema = z.object({
   id: z.string(),
   orderIndex: z.number(),
   title: z.string(),
+  description: z.string().optional(),
   lessons: z.array(lessonSchema).default([]),
 });
 
