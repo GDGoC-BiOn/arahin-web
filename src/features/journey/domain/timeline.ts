@@ -20,17 +20,16 @@ export function buildTimeline(track: TrackSummary): TimelineTrack {
     (a, b) => a.orderIndex - b.orderIndex,
   );
 
-  let currentAssigned = false;
+  // TODO 1 (workshop): derive the real production state.
+  //
+  // Rules:
+  // - completed lesson -> "done"
+  // - first incomplete lesson -> "current"
+  // - every lesson after it -> "locked"
+  //
+  // The UI below this domain function is already the real production Journey UI.
   const sessions = ordered.map((lesson, index) => {
-    let status: SessionStatus;
-    if (isCompleted(lesson)) {
-      status = "done";
-    } else if (!currentAssigned) {
-      status = "current";
-      currentAssigned = true;
-    } else {
-      status = "locked";
-    }
+    const status: SessionStatus = index === 0 ? "current" : "locked";
     return {
       id: lesson.id,
       position: index + 1,
