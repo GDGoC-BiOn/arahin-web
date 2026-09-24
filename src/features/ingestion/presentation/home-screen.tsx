@@ -124,6 +124,13 @@ export function HomeScreen({
             <UploadDropzone
               disabled={flow.busy}
               onFile={(file) => {
+                // Uploading changes the document count shown on Profile. Mark
+                // that cached snapshot stale now, but do not refetch an
+                // inactive screen before the backend has stored the source.
+                void queryClient.invalidateQueries({
+                  queryKey: ["profile", "snapshot"],
+                  refetchType: "none",
+                });
                 void flow.start(file);
               }}
             />
