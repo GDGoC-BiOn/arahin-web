@@ -194,6 +194,21 @@ export function QuizScreen({
     : submitError;
   const submitting = submitMutation.isPending;
 
+  // TODO 2 (workshop): store the selected option in React Hook Form.
+  //
+  // Expected shape:
+  // answers[itemId] = optionId
+  function selectAnswer(itemId: string, optionId: string) {
+    void itemId;
+    void optionId;
+  }
+
+  // TODO 2b (workshop): move the production quiz forward by one question.
+  // Keep the reducer/domain helper as the source of navigation behavior.
+  function nextQuestion() {
+    // Implement during the workshop.
+  }
+
   return (
     <AppPanel surface="bg-[#f8fafc]">
       <main
@@ -289,13 +304,7 @@ export function QuizScreen({
                   verdict={
                     reviewing ? optionVerdict(feedback, option.id) : null
                   }
-                  onSelect={(optionId) =>
-                    answerForm.setValue(
-                      "answers",
-                      { ...answers, [item.id]: optionId },
-                      { shouldDirty: true, shouldValidate: true },
-                    )
-                  }
+                  onSelect={(optionId) => selectAnswer(item.id, optionId)}
                 />
               ))}
             </motion.div>
@@ -333,7 +342,7 @@ export function QuizScreen({
           complete={complete}
           submitting={submitting}
           onPrevious={() => dispatch({ type: "previous" })}
-          onNext={() => dispatch({ type: "next", count: items.length })}
+          onNext={nextQuestion}
           onSubmit={submit}
         />
       )}
