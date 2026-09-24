@@ -44,6 +44,7 @@ const generationLessonSchema = z.object({
     "pending",
     "running",
     "completed",
+    "failed",
     "retryable_failed",
     "terminal_failed",
     "aborted",
