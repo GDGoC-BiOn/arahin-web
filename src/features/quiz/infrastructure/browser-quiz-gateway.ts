@@ -39,23 +39,60 @@ const answerFeedbackSchema = z.object({
   citation: citationSchema.optional(),
 });
 
-const attemptResultSchema = z.object({
-  // Activity grading has no attempt row/id; legacy quiz attempts do.
-  attemptId: z.string().default(""),
-  quizId: z.string().default(""),
+const legacyAttemptResultSchema = z.object({
+  attemptId: z.string(),
+  quizId: z.string(),
   score: z.number(),
   correctCount: z.number(),
   totalItems: z.number(),
   isPassed: z.boolean(),
-  passingScore: z.number().default(0),
-  dailyStreak: z.number().default(0),
-  lessonCompleted: z.boolean().default(false),
+  passingScore: z.number(),
+  dailyStreak: z.number(),
+  lessonCompleted: z.boolean(),
   xpEarned: z.number().optional(),
   answers: z.array(answerFeedbackSchema).optional(),
-  mastery: z.number().optional(),
-  reviewDueAt: z.string().optional(),
-  reviewIntervalDays: z.number().optional(),
 });
+
+const activityResultSchema = z.object({
+  activityId: z.string(),
+  lessonId: z.string(),
+  kind: z.string(),
+  score: z.number(),
+  correctCount: z.number(),
+  totalItems: z.number(),
+  isPassed: z.boolean(),
+  passingScore: z.number(),
+  mastery: z.number(),
+  reviewIntervalDays: z.number(),
+  reviewDueAt: z.string(),
+  lessonCompleted: z.boolean(),
+  xpEarned: z.number(),
+  answers: z.array(answerFeedbackSchema),
+});
+
+function parseActivityResult(data: unknown): AttemptResult {
+  const parsed = activityResultSchema.parse(data);
+  return {
+    // Activity submissions are not legacy quiz attempts, so they do not have
+    // attemptId/quizId/dailyStreak. The shared presentation model keeps those
+    // legacy fields populated with neutral values while preserving strict
+    // validation of the activity response itself.
+    attemptId: "",
+    quizId: "",
+    dailyStreak: 0,
+    score: parsed.score,
+    correctCount: parsed.correctCount,
+    totalItems: parsed.totalItems,
+    isPassed: parsed.isPassed,
+    passingScore: parsed.passingScore,
+    lessonCompleted: parsed.lessonCompleted,
+    xpEarned: parsed.xpEarned,
+    answers: parsed.answers,
+    mastery: parsed.mastery,
+    reviewDueAt: parsed.reviewDueAt,
+    reviewIntervalDays: parsed.reviewIntervalDays,
+  };
+}
 
 export function createBrowserQuizGateway(client: AxiosInstance): QuizGateway {
   return {
@@ -71,13 +108,13 @@ export function createBrowserQuizGateway(client: AxiosInstance): QuizGateway {
           `/lessons/${encodeURIComponent(source.lessonId)}/activities/${encodeURIComponent(source.activityId)}/submit`,
           { answers },
         );
-        return attemptResultSchema.parse(data);
+        return parseActivityResult(data);
       }
       const { data } = await client.post("/quiz-attempts", {
         quizId: source.quizId,
         answers,
       });
-      return attemptResultSchema.parse(data);
+      return legacyAttemptResultSchema.parse(data);
     },
   };
 }
