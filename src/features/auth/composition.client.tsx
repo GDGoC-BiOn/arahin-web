@@ -27,9 +27,9 @@ export function LoginFeature({ error }: { error?: string | null }) {
       useCases={useCases}
       onSignedIn={() => {
         // QueryClient lives across client-side navigations. Drop all
-        // user-scoped server data before entering a newly authenticated
-        // session so another account can never inherit the previous cache.
-        queryClient.removeQueries();
+        // user-scoped server data and mutation state before entering a newly
+        // authenticated session so another account cannot inherit either.
+        queryClient.clear();
         router.replace("/beranda");
       }}
       onRegister={() => router.push("/daftar")}
@@ -68,7 +68,7 @@ export function RegisterFeature() {
       useCases={useCases}
       onGoogle={() => window.location.assign("/api/auth/google")}
       onRegistered={() => {
-        queryClient.removeQueries();
+        queryClient.clear();
         router.replace("/beranda");
       }}
       onLogin={() => router.push("/masuk")}
@@ -83,9 +83,9 @@ export function SignOutAction() {
     <LogoutButton
       useCases={useCases}
       onSignedOut={() => {
-        // React Query's browser client survives route changes. Remove every
-        // cached server response before leaving the authenticated session.
-        queryClient.removeQueries();
+        // React Query's browser client survives route changes. Clear both query
+        // and mutation caches before leaving the authenticated session.
+        queryClient.clear();
         // replace(), not push(): the guarded page must not come back on Back.
         router.replace("/masuk");
         router.refresh();
