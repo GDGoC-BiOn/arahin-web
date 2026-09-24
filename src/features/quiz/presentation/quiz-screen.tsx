@@ -163,6 +163,9 @@ export function QuizScreen({
       void queryClient.invalidateQueries({
         queryKey: ["profile", "snapshot"],
       });
+      void queryClient.invalidateQueries({
+        queryKey: ["profile", "notifications"],
+      });
 
       if (hasReview(graded)) {
         dispatch({ type: "review" });
