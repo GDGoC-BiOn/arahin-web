@@ -7,7 +7,6 @@ import type { OptionVerdict } from "../domain/quiz-review";
 import {
   OPTION_STAGGER,
   OPTION_TINT,
-  PRESS,
   QUESTION_SPRING,
 } from "./motion-tokens";
 
