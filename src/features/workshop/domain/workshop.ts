@@ -16,6 +16,7 @@ export type WorkshopTrack = {
   id: string;
   orderIndex: number;
   title: string;
+  description?: string;
   lessons: WorkshopLesson[];
 };
 
