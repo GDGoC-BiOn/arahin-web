@@ -25,6 +25,7 @@ export type GenerationLessonTaskStatus =
   | "pending"
   | "running"
   | "completed"
+  | "failed"
   | "retryable_failed"
   | "terminal_failed"
   | "aborted";
