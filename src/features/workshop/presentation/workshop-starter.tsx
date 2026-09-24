@@ -238,9 +238,10 @@ export function WorkshopStarter({ api }: { api: WorkshopApi }) {
         loading={spacesQuery.isPending || tracksQuery.isPending}
         error={error}
         onBack={() => window.location.assign("/beranda")}
-        onOpen={(step) =>
-          openLesson(steps.find((candidate) => candidate.id === step.id) ?? steps[0])
-        }
+        onOpen={(step) => {
+          const selected = steps.find((candidate) => candidate.id === step.id);
+          if (selected) openLesson(selected);
+        }}
         onSelectTab={(tab) => {
           if (tab === "home") window.location.assign("/beranda");
           if (tab === "profile") window.location.assign("/profil");
