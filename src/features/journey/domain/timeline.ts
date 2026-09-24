@@ -29,7 +29,10 @@ export function buildTimeline(track: TrackSummary): TimelineTrack {
   //
   // The UI below this domain function is already the real production Journey UI.
   const sessions = ordered.map((lesson, index) => {
-    const status: SessionStatus = index === 0 ? "current" : "locked";
+    // Deliberately incomplete starter behavior: completion is respected, but
+    // every unfinished lesson is treated as current. Participants fix this so
+    // only the first unfinished lesson is current and the rest are locked.
+    const status: SessionStatus = isCompleted(lesson) ? "done" : "current";
     return {
       id: lesson.id,
       position: index + 1,
