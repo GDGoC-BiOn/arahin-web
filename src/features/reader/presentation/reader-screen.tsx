@@ -17,7 +17,6 @@ export function ReaderScreen({
   heading,
   downloadHref,
   contentMarkdown,
-  hasQuiz,
   onBack,
   onContinue,
 }: {
@@ -25,7 +24,6 @@ export function ReaderScreen({
   heading: string;
   downloadHref: string;
   contentMarkdown: string;
-  hasQuiz: boolean;
   onBack: () => void;
   onContinue: () => void;
 }) {
