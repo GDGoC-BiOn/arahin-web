@@ -9,6 +9,10 @@ import {
   XSmallIcon,
 } from "@/shared/presentation/icons";
 import { AppPanel } from "@/shared/presentation/layout/app-panel";
+import {
+  type AppTab,
+  BottomTabBar,
+} from "@/shared/presentation/navigation/bottom-tab-bar";
 import type {
   WorkshopAnswerFeedback,
   WorkshopAttemptResult,
@@ -64,6 +68,7 @@ export function WorkshopJourneyScreen({
   error,
   onBack,
   onOpen,
+  onSelectTab,
 }: {
   title: string;
   subtitle: string;
@@ -72,6 +77,7 @@ export function WorkshopJourneyScreen({
   error: string | null;
   onBack: () => void;
   onOpen: (step: WorkshopJourneyStep) => void;
+  onSelectTab: (tab: AppTab) => void;
 }) {
   const completedCount = steps.filter((step) => step.status === "done").length;
   const totalCount = steps.length;
@@ -200,6 +206,7 @@ export function WorkshopJourneyScreen({
           </div>
         ) : null}
       </main>
+      <BottomTabBar active="journey" onSelect={onSelectTab} />
     </AppPanel>
   );
 }
