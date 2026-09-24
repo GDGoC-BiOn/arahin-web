@@ -20,12 +20,17 @@ The starter mirrors the production frontend conventions:
 ## Before the session
 
 1. Run: git checkout starter
-2. Run: pnpm install --frozen-lockfile
-3. Run: pnpm dev
-4. Sign in with the normal ArahIn flow.
-5. Open /beranda and trigger one real AI generation.
-6. Open /workshop while generation continues.
-7. Keep one previously-generated learning space ready as a fallback.
+2. Copy the env example: cp .env.example .env.local
+3. Run: pnpm install --frozen-lockfile
+4. Run: pnpm dev
+5. Sign in with the normal ArahIn flow.
+6. Open /beranda and trigger one real AI generation.
+7. Open /workshop while generation continues.
+8. Keep one previously-generated learning space ready as a fallback.
+
+The workshop screen intentionally uses the same mobile frame, journey timeline,
+quiz styling, feedback sheet, result modal, and bottom navigation language as
+production ArahIn. There is no separate workshop dashboard UI.
 
 ## Files participants need
 
