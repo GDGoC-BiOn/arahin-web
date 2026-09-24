@@ -4,11 +4,7 @@ import { motion } from "motion/react";
 import { CheckSmallIcon, XSmallIcon } from "@/shared/presentation/icons";
 import type { QuizOption as Option } from "../domain/quiz";
 import type { OptionVerdict } from "../domain/quiz-review";
-import {
-  OPTION_STAGGER,
-  OPTION_TINT,
-  QUESTION_SPRING,
-} from "./motion-tokens";
+import { OPTION_STAGGER, OPTION_TINT, QUESTION_SPRING } from "./motion-tokens";
 
 const CHIP: Record<OptionVerdict | "selected", string> = {
   selected: "#3d6bec",
