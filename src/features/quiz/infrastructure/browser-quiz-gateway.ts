@@ -40,7 +40,8 @@ const answerFeedbackSchema = z.object({
 });
 
 const attemptResultSchema = z.object({
-  attemptId: z.string(),
+  // Activity grading has no attempt row/id; legacy quiz attempts do.
+  attemptId: z.string().default(""),
   quizId: z.string().default(""),
   score: z.number(),
   correctCount: z.number(),
