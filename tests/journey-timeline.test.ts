@@ -108,17 +108,20 @@ describe("buildTimeline", () => {
 
   it("reads completion from the server's status or completedAt", () => {
     const summary = track(3);
-    const lessons = summary.lessons;
+    const [first, second, third] = summary.lessons;
+    if (!first || !second || !third) {
+      throw new Error("expected three lesson fixtures");
+    }
     const built = buildTimeline({
       ...summary,
       lessons: [
         {
-          ...lessons[0]!,
+          ...first,
           status: "unlocked",
           completedAt: "2026-09-17T10:00:00Z",
         },
-        { ...lessons[1]!, status: "unlocked", completedAt: null },
-        { ...lessons[2]!, status: "unlocked" },
+        { ...second, status: "unlocked", completedAt: null },
+        { ...third, status: "unlocked" },
       ],
     });
     expect(built.sessions.map((s) => s.status)).toEqual([

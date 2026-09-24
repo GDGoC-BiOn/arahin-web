@@ -9,32 +9,30 @@ describe("browser quiz gateway result contracts", () => {
     const mock = new MockAdapter(client);
     const gateway = createBrowserQuizGateway(client);
 
-    mock
-      .onPost("/lessons/lesson-1/activities/activity-1/submit")
-      .reply(200, {
-        activityId: "activity-1",
-        lessonId: "lesson-1",
-        kind: "quiz",
-        score: 67,
-        correctCount: 2,
-        totalItems: 3,
-        isPassed: false,
-        passingScore: 70,
-        mastery: 67,
-        reviewIntervalDays: 0,
-        reviewDueAt: "2026-09-25T00:00:00Z",
-        lessonCompleted: true,
-        xpEarned: 10,
-        answers: [
-          {
-            itemId: "item-1",
-            chosenOptionId: "a",
-            correctOptionId: "b",
-            isCorrect: false,
-            explanation: "Because B is correct.",
-          },
-        ],
-      });
+    mock.onPost("/lessons/lesson-1/activities/activity-1/submit").reply(200, {
+      activityId: "activity-1",
+      lessonId: "lesson-1",
+      kind: "quiz",
+      score: 67,
+      correctCount: 2,
+      totalItems: 3,
+      isPassed: false,
+      passingScore: 70,
+      mastery: 67,
+      reviewIntervalDays: 0,
+      reviewDueAt: "2026-09-25T00:00:00Z",
+      lessonCompleted: true,
+      xpEarned: 10,
+      answers: [
+        {
+          itemId: "item-1",
+          chosenOptionId: "a",
+          correctOptionId: "b",
+          isCorrect: false,
+          explanation: "Because B is correct.",
+        },
+      ],
+    });
 
     const result = await gateway.submit({
       source: {
@@ -92,14 +90,12 @@ describe("browser quiz gateway result contracts", () => {
     const mock = new MockAdapter(client);
     const gateway = createBrowserQuizGateway(client);
 
-    mock
-      .onPost("/lessons/lesson-1/activities/activity-1/submit")
-      .reply(200, {
-        score: 100,
-        correctCount: 1,
-        totalItems: 1,
-        isPassed: true,
-      });
+    mock.onPost("/lessons/lesson-1/activities/activity-1/submit").reply(200, {
+      score: 100,
+      correctCount: 1,
+      totalItems: 1,
+      isPassed: true,
+    });
 
     await expect(
       gateway.submit({
