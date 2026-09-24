@@ -71,6 +71,8 @@ export function WorkshopStarter({ api }: { api: WorkshopApi }) {
   const spacesQuery = useQuery({
     queryKey: ["workshop", "spaces"],
     queryFn: () => api.listSpaces(),
+    refetchInterval: (query) =>
+      query.state.data?.some((space) => space.hasTracks) ? false : 2_500,
   });
 
   useEffect(() => {
@@ -80,10 +82,14 @@ export function WorkshopStarter({ api }: { api: WorkshopApi }) {
     if (firstReady) setSelectedSpaceId(firstReady.id);
   }, [selectedSpaceId, spacesQuery.data]);
 
+  const selectedSpace = spacesQuery.data?.find(
+    (space) => space.id === selectedSpaceId,
+  );
+
   const tracksQuery = useQuery({
     queryKey: ["workshop", "tracks", selectedSpaceId],
     queryFn: () => api.loadTracks(selectedSpaceId),
-    enabled: Boolean(selectedSpaceId),
+    enabled: Boolean(selectedSpaceId && selectedSpace?.hasTracks),
   });
 
   const quizQuery = useQuery({
@@ -235,7 +241,11 @@ export function WorkshopStarter({ api }: { api: WorkshopApi }) {
           (track ? `${track.lessons.length} sesi belajar` : "Memuat materi…")
         }
         steps={steps}
-        loading={spacesQuery.isPending || tracksQuery.isPending}
+        loading={
+          spacesQuery.isPending ||
+          !selectedSpace?.hasTracks ||
+          tracksQuery.isPending
+        }
         error={error}
         onBack={() => window.location.assign("/beranda")}
         onOpen={(step) => {
