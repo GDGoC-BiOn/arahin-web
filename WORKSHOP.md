@@ -1,149 +1,311 @@
-# ArahIn Frontend Workshop Starter
+# ArahIn Frontend Workshop — Starter Branch
 
-## Theme
+## The important part
 
-**AI Generated It. Now Make It Interactive.**
+This branch is **the real ArahIn product UI**.
 
-Total event slot can be 40 minutes, but the core material is intentionally designed to finish in **30 minutes**. The remaining 10 minutes are for introduction, setup drift, API/generation latency, participant recovery, and Q&A.
+There is no separate `/workshop` screen.
 
-The workshop uses the real ArahIn API. There are no quiz fixtures and no answer keys shipped to the browser before submission.
+Participants use the exact production flow:
 
-## Stack used in the workshop
+```text
+/beranda
+  ↓
+upload + AI generation
+  ↓
+/ruang/:spaceId        ← real Journey UI
+  ↓
+/sesi/:lessonId        ← real lesson reader
+  ↓
+/sesi/:lessonId/slide  ← real generated slides
+  ↓
+/sesi/:lessonId/kuis   ← real Quiz UI
+```
 
-The starter mirrors the production frontend conventions:
+The UI, routes, API proxy, React Query setup, Zod boundaries, motion, reader,
+quiz feedback, and result modal are the production implementation.
 
-- **Zod** validates successful API payloads at the infrastructure boundary.
-- **TanStack React Query** owns spaces, tracks, quiz server state, mutations, cache invalidation, loading, and errors.
-- **React Hook Form + zodResolver** owns the participant's quiz answers.
-- React local state is reserved for UI-only state such as selected space, current question index, and currently opened lesson.
+Only **three pieces of logic** are intentionally unfinished.
 
-## Before the session
+---
 
-1. Run: git checkout starter
-2. Copy the env example: cp .env.example .env.local
-3. Run: pnpm install --frozen-lockfile
-4. Run: pnpm dev
-5. Sign in with the normal ArahIn flow.
-6. Open /beranda and trigger one real AI generation.
-7. Open /workshop while generation continues.
-8. Keep one previously-generated learning space ready as a fallback.
+## Setup
 
-The workshop screen intentionally uses the same mobile frame, journey timeline,
-quiz styling, feedback sheet, result modal, and bottom navigation language as
-production ArahIn. There is no separate workshop dashboard UI.
+```bash
+git fetch origin
+git switch starter
+git reset --hard origin/starter
 
-## Files participants need
+cp .env.example .env.local
+pnpm install --frozen-lockfile
+pnpm dev
+```
 
-Most hands-on work stays in:
+The env example already points to the deployed Go backend:
 
-src/features/workshop/presentation/workshop-starter.tsx
+```env
+ARAHIN_API_URL=https://arahin-backend-hxf3nwliva-as.a.run.app
+```
 
-Useful files to show, but not ask participants to rewrite:
+The browser will still show requests to `localhost:3000/api/*`. That is
+expected: Next.js proxies those requests to `ARAHIN_API_URL`.
 
-- src/features/workshop/infrastructure/workshop-api.ts — Axios request + Zod response parsing
-- src/features/workshop/domain/workshop.ts — trusted frontend contracts
-- src/features/workshop/presentation/workshop-ui.tsx — prepared visual components
+---
 
-## 30-minute core flow
+## Before the workshop
 
-### 00:00–03:00 — Trigger real AI generation
+1. Sign in through the normal ArahIn UI.
+2. Open `/beranda`.
+3. Upload a real PDF/material and trigger AI generation.
+4. Keep one previously-generated Learning Space as a fallback.
+5. Open the generated card from Beranda.
 
-Generate material through the normal ArahIn flow.
+Do **not** open a special workshop page. There is none.
 
-Key point: We are not building an AI SDK call. We are building what happens after AI returns structured learning data.
+---
 
-Do not wait for generation to finish. Move to /workshop.
+# Checkpoint 1 — Journey state
 
-### 03:00–06:00 — Follow data across the boundary
+### File
 
-Open workshop-api.ts and show:
+```text
+src/features/journey/domain/timeline.ts
+```
 
-real API response → Zod → trusted domain data → React Query cache → UI
+The production Journey UI already exists in:
 
-Highlight that TypeScript alone cannot validate runtime JSON.
+```text
+src/features/journey/presentation/journey-screen.tsx
+src/features/journey/presentation/session-node.tsx
+src/features/journey/presentation/track-timeline.tsx
+```
 
-### 06:00–14:00 — Checkpoint 1: build the learning stepper
+Do not edit those UI files.
 
-Implement buildWorkshopSteps().
+The starter deliberately simplifies `buildTimeline()` so the first lesson is
+always current and the rest are locked.
 
-Rules:
+Find:
 
-- lesson.status === completed or completedAt exists → done
-- first incomplete lesson → current
-- everything after it → locked
+```ts
+// TODO 1 (workshop)
+```
+
+Implement these rules:
+
+```text
+completed lesson
+→ done
+
+first incomplete lesson
+→ current
+
+everything after it
+→ locked
+```
+
+Production completion truth comes from:
+
+```ts
+lesson.status === "completed" || Boolean(lesson.completedAt)
+```
 
 Expected result:
 
-✓ Lesson 1
-● Lesson 2
-🔒 Lesson 3
+```text
+✓ Sesi 1
+● Sesi 2
+🔒 Sesi 3
+```
 
-**Hard stop: minute 14.** If participants are behind, show the solution and move on.
+This is domain state derivation. The visual Journey stays untouched.
 
-### 14:00–21:00 — Checkpoint 2: make generated quiz interactive
+---
+
+# Checkpoint 2 — Make the real Quiz interactive
+
+Continue through the real product:
+
+```text
+Journey
+→ lesson reader
+→ generated slide
+→ quiz
+```
+
+### File
+
+```text
+src/features/quiz/presentation/quiz-screen.tsx
+```
 
 React Query already loads the real generated quiz.
 
-Implement selectOption() using React Hook Form:
+React Hook Form is already initialized:
 
-answerForm.setValue(
-  "answers",
-  { ...answers, [itemId]: optionId },
-  { shouldDirty: true, shouldValidate: true },
-);
+```ts
+const answerForm = useForm<QuizAnswerFormValues>({
+  resolver: zodResolver(quizAnswerFormSchema),
+  defaultValues: { answers: {} },
+});
+```
 
-Then implement goNext() by clamping the index to the final generated item.
+### TODO 2 — Select an answer
 
-Key point:
+Find:
 
-server state → React Query
-form state → React Hook Form
-UI state → React useState
+```ts
+function selectAnswer(itemId: string, optionId: string) {
+  // TODO
+}
+```
 
-Do not put all three kinds of state in one bucket.
+Store answers as:
 
-### 21:00–27:00 — Checkpoint 3: submit to the real backend
+```text
+answers[itemId] = optionId
+```
 
-Build the API payload inside submitQuiz:
+Use `answerForm.setValue()`.
 
-const payload = quiz.quiz.items.map((item) => ({
-  itemId: item.id,
-  optionId: values.answers[item.id],
-}));
+### TODO 2b — Navigate forward
 
-Then call the already-wired mutation.
+Find:
 
-Before submit, inspect the quiz response: it contains question + options, but not correctOptionId or explanation.
+```ts
+function nextQuestion() {
+  // TODO
+}
+```
 
-After submit, the backend returns grading feedback and the result panel renders it.
+The production quiz already owns navigation in its reducer/domain helpers.
 
-### 27:00–30:00 — Close the loop
+Dispatch the existing next action using the current number of items.
 
-Point out the mutation onSuccess:
+Previous navigation, animations, progress bar, feedback UI, and result modal are
+already production code.
 
-submit → backend updates completion → invalidate tracks query → React Query refetches → stepper changes
+---
 
-Expected transition:
+# Checkpoint 3 — Submit the transport contract
 
-BEFORE: ✓ Lesson 1 / ● Lesson 2 / 🔒 Lesson 3
-AFTER:  ✓ Lesson 1 / ✓ Lesson 2 / ● Lesson 3
+### File
 
-Closing:
+```text
+src/features/quiz/application/quiz-use-cases.ts
+```
 
-**AI generates the learning structure. Frontend turns it into interaction. Backend keeps the truth.**
+Find:
 
-## 10-minute reserve
+```ts
+// TODO 3 (workshop)
+const answers: QuizAnswer[] = [];
+```
 
-Use the remaining event time for any combination of:
+Transform the user's answer state into:
 
-- introduction / speaker context
-- waiting for generation
-- fixing participant setup issues
-- repeating one coding checkpoint
-- Q&A
+```ts
+[
+  { itemId: "...", optionId: "..." },
+  { itemId: "...", optionId: "..." },
+]
+```
 
-Do not add another feature just because the first 30 minutes went smoothly.
+Preserve the order of `input.items` and only include answered items.
 
-## Facilitator fallback
+Then the existing gateway submits to the real backend.
 
-If live AI generation is slow, switch the learning-space selector to the pre-generated fallback. It is still real API data; the workshop should never need local fake quiz fixtures.
+---
+
+# What to show, not rewrite
+
+## Zod boundary
+
+Open:
+
+```text
+src/features/quiz/infrastructure/browser-quiz-gateway.ts
+src/features/journey/infrastructure/browser-journey-gateway.ts
+```
+
+The pattern is:
+
+```text
+HTTP response
+→ Zod parse
+→ trusted domain data
+```
+
+Participants do not need to write long schemas during a 30-minute workshop.
+
+## React Query
+
+Open:
+
+```text
+src/features/journey/presentation/journey-screen.tsx
+src/features/quiz/presentation/quiz-screen.tsx
+```
+
+Show that server state is already owned by `useQuery` / `useMutation`.
+
+After a successful quiz submit, production code invalidates:
+
+```ts
+["journey", "timeline", spaceId]
+```
+
+so the real Journey refetches backend truth instead of manually setting a lesson
+to completed.
+
+---
+
+# Why the correct answer is missing before submit
+
+Open:
+
+```text
+src/features/quiz/domain/quiz.ts
+```
+
+`QuizItem` contains:
+
+```text
+question
+options
+```
+
+It does **not** contain:
+
+```text
+correctOptionId
+explanation
+```
+
+Those fields only appear in `AnswerFeedback` after grading.
+
+This is intentional: the backend keeps the answer key.
+
+---
+
+# 30-minute core flow
+
+```text
+00–03  trigger real AI generation from /beranda
+03–06  show API → Zod → React Query boundary
+06–14  TODO 1: production Journey state
+14–21  TODO 2: RHF answer + quiz navigation
+21–27  TODO 3: real submit payload
+27–30  backend grading → invalidate → real Journey updates
+```
+
+Keep the remaining event time for intro, generation latency, participant
+recovery, and Q&A.
+
+---
+
+## Closing
+
+> AI generates the learning structure.  
+> Frontend turns it into interaction.  
+> Backend keeps the truth.
