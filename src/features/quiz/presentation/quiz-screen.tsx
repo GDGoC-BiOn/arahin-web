@@ -206,10 +206,8 @@ export function QuizScreen({
     void optionId;
   }
 
-  // TODO 2b (workshop): move the production quiz forward by one question.
-  // Keep the reducer/domain helper as the source of navigation behavior.
   function nextQuestion() {
-    // Implement during the workshop.
+    dispatch({ type: "next", count: items.length });
   }
 
   return (
