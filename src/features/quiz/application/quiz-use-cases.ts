@@ -27,7 +27,7 @@ export function createQuizUseCases(gateway: QuizGateway) {
       spaceId: string | null;
       lessonId: string;
     }): Promise<AttemptResult> {
-      // TODO 4 (workshop): turn UI/form state into the backend transport
+      // TODO 3 (workshop): turn UI/form state into the backend transport
       // contract: [{ itemId, optionId }].
       //
       // Keep quiz item order and only include answered items.
