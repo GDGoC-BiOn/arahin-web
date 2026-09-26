@@ -19,7 +19,6 @@ import {
   citationLabels,
   feedbackFor,
   feedbackTitle,
-  hasReview,
   optionVerdict,
 } from "../domain/quiz-review";
 import {
@@ -149,11 +148,13 @@ export function QuizScreen({
       setExpired(false);
       setSubmitError(null);
 
-      if (spaceId) {
-        void queryClient.invalidateQueries({
-          queryKey: ["journey", "timeline", spaceId],
-        });
-      }
+      // TODO 4 (optional workshop): the backend has already updated lesson
+      // completion, but the Journey query can still be stale.
+      //
+      // Invalidate ["journey", "timeline", spaceId] so returning to Journey
+      // reflects the latest progress.
+      void spaceId;
+
       void queryClient.invalidateQueries({
         queryKey: ["ingestion", "recent-uploads"],
       });
@@ -167,12 +168,12 @@ export function QuizScreen({
         queryKey: ["profile", "notifications"],
       });
 
-      if (hasReview(graded)) {
-        dispatch({ type: "review" });
-        setReviewing(true);
-      } else {
-        setShowResult(true);
-      }
+      // TODO 5 (optional workshop): use the graded response to enter the
+      // per-question review flow when answer feedback is available.
+      //
+      // Starter behavior goes straight to the summary modal. The optional
+      // checkpoint wires graded feedback into the existing review UI.
+      setShowResult(true);
     },
     onError: (caught) => {
       if (isSessionExpired(caught)) {
