@@ -153,7 +153,6 @@ export function QuizScreen({
       //
       // Invalidate ["journey", "timeline", spaceId] so returning to Journey
       // reflects the latest progress.
-      void spaceId;
 
       void queryClient.invalidateQueries({
         queryKey: ["ingestion", "recent-uploads"],
